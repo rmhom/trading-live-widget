@@ -12,36 +12,67 @@
             font-family: Arial, sans-serif;
         }
         .container {
-            width: 300px;
-            height: 150px;
+            width: 400px;
+            height: 280px;
             background: rgba(0, 0, 0, 0.9);
             border-radius: 8px;
-            padding: 10px;
+            padding: 8px;
             border: 1px solid #333;
         }
         
-        /* 价格显示区域 - 更大更明显 */
-        .price-section {
-            text-align: center;
-            margin-bottom: 15px;
+        /* TradingView图表容器 - 隐藏品牌字样 */
+        .chart-container {
+            width: 100%;
+            height: 180px;
+            position: relative;
+            margin-bottom: 8px;
+            overflow: hidden;
+        }
+        
+        /* 隐藏TradingView品牌字样 */
+        .tradingview-widget-copyright {
+            display: none !important;
+        }
+        
+        /* 通过CSS隐藏所有可能显示品牌的位置 */
+        [class*="tradingview"][class*="copyright"],
+        [class*="tradingview"][class*="branding"],
+        [class*="watermark"] {
+            display: none !important;
+            opacity: 0 !important;
+            visibility: hidden !important;
+        }
+        
+        /* 价格和投票区域 */
+        .info-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 50px;
+        }
+        
+        /* 价格显示 */
+        .price-display {
+            flex: 1;
+            text-align: left;
         }
         
         .symbol {
             color: #ccc;
-            font-size: 14px;
-            margin-bottom: 5px;
+            font-size: 12px;
+            margin-bottom: 2px;
         }
         
         .price {
             color: white;
-            font-size: 24px;
+            font-size: 18px;
             font-weight: bold;
-            margin: 5px 0;
         }
         
         .change {
-            font-size: 14px;
+            font-size: 12px;
             font-weight: bold;
+            margin-left: 5px;
         }
         
         .positive { color: #00ff00; }
@@ -49,20 +80,9 @@
         .neutral { color: #cccccc; }
         
         /* 三色灯区域 */
-        .lights-section {
-            text-align: center;
-        }
-        
-        .lights-title {
-            color: #ccc;
-            font-size: 12px;
-            margin-bottom: 8px;
-        }
-        
         .lights-container {
             display: flex;
-            justify-content: center;
-            gap: 15px;
+            gap: 10px;
         }
         
         .light-wrapper {
@@ -72,8 +92,8 @@
         }
         
         .light {
-            width: 30px;
-            height: 30px;
+            width: 25px;
+            height: 25px;
             border-radius: 50%;
             cursor: pointer;
             transition: all 0.3s ease;
@@ -82,7 +102,7 @@
             align-items: center;
             justify-content: center;
             font-weight: bold;
-            font-size: 14px;
+            font-size: 12px;
         }
         
         .light:hover {
@@ -114,19 +134,19 @@
         .white.level-5 { background-color: #444444; }
         
         .vote-count {
-            font-size: 10px;
+            font-size: 9px;
             color: #ccc;
-            margin-top: 3px;
+            margin-top: 2px;
             font-weight: bold;
         }
         
         /* 状态指示器 */
         .status-indicator {
-            width: 8px;
-            height: 8px;
+            width: 6px;
+            height: 6px;
             border-radius: 50%;
             display: inline-block;
-            margin-left: 5px;
+            margin-left: 3px;
             animation: pulse 2s infinite;
         }
         
@@ -135,42 +155,54 @@
             50% { opacity: 0.5; }
             100% { opacity: 1; }
         }
+        
+        /* 隐藏TradingView工具栏的额外样式 */
+        .chart-container iframe {
+            margin-top: -5px !important;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- 价格显示区域 -->
-        <div class="price-section">
-            <div class="symbol">
-                BTC/USDT 
-                <span id="statusIndicator" class="status-indicator" style="background-color: #ccc;"></span>
-            </div>
-            <div class="price" id="currentPrice">--.--</div>
-            <div class="change">
-                <span id="priceChange">0.00%</span>
-            </div>
+        <!-- 图表区域 -->
+        <div class="chart-container">
+            <div id="tradingview_chart"></div>
         </div>
         
-        <!-- 三色灯投票区域 -->
-        <div class="lights-section">
-            <div class="lights-title">观众情绪投票 ↑→↓</div>
+        <!-- 信息和投票区域 -->
+        <div class="info-section">
+            <!-- 价格显示 -->
+            <div class="price-display">
+                <div class="symbol">
+                    BTC/USDT <span id="statusIndicator" class="status-indicator" style="background-color: #ccc;"></span>
+                </div>
+                <div>
+                    <span class="price" id="currentPrice">--.--</span>
+                    <span class="change" id="priceChange">0.00%</span>
+                </div>
+            </div>
+            
+            <!-- 三色灯投票 -->
             <div class="lights-container">
-                <div class="light-wrapper">
-                    <div class="light green level-1" onclick="vote('green')" title="看涨">↑</div>
+                <div class="light-wrapper" title="看涨">
+                    <div class="light green level-1" onclick="vote('green')">↑</div>
                     <div class="vote-count" id="greenCount">0</div>
                 </div>
-                <div class="light-wrapper">
-                    <div class="light white level-1" onclick="vote('white')" title="持平">→</div>
+                <div class="light-wrapper" title="持平">
+                    <div class="light white level-1" onclick="vote('white')">→</div>
                     <div class="vote-count" id="whiteCount">0</div>
                 </div>
-                <div class="light-wrapper">
-                    <div class="light red level-1" onclick="vote('red')" title="看跌">↓</div>
+                <div class="light-wrapper" title="看跌">
+                    <div class="light red level-1" onclick="vote('red')">↓</div>
                     <div class="vote-count" id="redCount">0</div>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- TradingView脚本 -->
+    <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+    
     <script>
         // 初始化变量
         let votes = { green: 0, white: 0, red: 0 };
@@ -180,8 +212,8 @@
         // 页面加载完成后执行
         window.addEventListener('load', function() {
             loadVotes();
+            initTradingView();
             setupPriceWebSocket();
-            startPriceUpdate();
         });
 
         // 加载投票数据
@@ -209,7 +241,7 @@
             
             // 点击效果
             const light = document.querySelector(`.light.${color}`);
-            light.style.boxShadow = '0 0 10px gold';
+            light.style.boxShadow = '0 0 8px gold';
             setTimeout(() => { light.style.boxShadow = 'none'; }, 300);
         }
 
@@ -230,6 +262,95 @@
             });
         }
 
+        // 初始化TradingView图表（隐藏品牌）
+        function initTradingView() {
+            if (typeof TradingView !== 'undefined') {
+                new TradingView.widget({
+                    "width": "100%",
+                    "height": "180",
+                    "symbol": "BINANCE:BTCUSDT",
+                    "interval": "5",
+                    "timezone": "Asia/Shanghai",
+                    "theme": "dark",
+                    "style": "1",
+                    "locale": "zh_CN",
+                    "enable_publishing": false,
+                    "allow_symbol_change": false,
+                    "container_id": "tradingview_chart",
+                    "hide_top_toolbar": true,
+                    "hide_legend": true,
+                    "hide_side_toolbar": true,  // 隐藏侧边工具栏
+                    "studies": [
+                        "volume@tv-basicstudies"
+                    ],
+                    "disabled_features": [
+                        "header_widget",
+                        "left_toolbar",
+                        "footer_screenshot",
+                        "volume_force_overlay",
+                        "show_logo_on_all_charts",
+                        "caption_buttons_text_if_possible",
+                        "header_compare",
+                        "header_undo_redo",
+                        "header_saveload",
+                        "header_screenshot",
+                        "header_chart_type",
+                        "header_interval_dialog_button",
+                        "header_compare_dialog_button",
+                        "header_indicators",
+                        "header_fullscreen_button",
+                        "header_settings",
+                        "header_symbol_search"
+                    ],
+                    "enabled_features": [
+                        "hide_volume"
+                    ]
+                });
+                
+                // 延迟隐藏可能出现的品牌元素
+                setTimeout(hideBrandingElements, 2000);
+            }
+        }
+
+        // 隐藏品牌元素
+        function hideBrandingElements() {
+            // 多种方式隐藏TradingView品牌
+            const selectors = [
+                '[class*="copyright"]',
+                '[class*="branding"]',
+                '[class*="watermark"]',
+                '[class*="logo"]',
+                '.tradingview-widget-copyright',
+                'a[href*="tradingview.com"]'
+            ];
+            
+            selectors.forEach(selector => {
+                const elements = document.querySelectorAll(selector);
+                elements.forEach(el => {
+                    el.style.display = 'none';
+                    el.style.opacity = '0';
+                    el.style.visibility = 'hidden';
+                });
+            });
+            
+            // 隐藏iframe内的品牌（如果适用）
+            const iframe = document.querySelector('iframe');
+            if (iframe) {
+                iframe.onload = function() {
+                    try {
+                        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                        const iframeElements = iframeDoc.querySelectorAll(selectors.join(','));
+                        iframeElements.forEach(el => {
+                            el.style.display = 'none';
+                            el.style.opacity = '0';
+                        });
+                    } catch (e) {
+                        // 跨域限制，无法访问iframe内容
+                    }
+                };
+            }
+        }
+
         // WebSocket获取实时价格
         function setupPriceWebSocket() {
             try {
@@ -237,7 +358,6 @@
                 
                 websocket.onopen = function() {
                     updateStatusIndicator('#00ff00');
-                    console.log('价格连接成功');
                 };
                 
                 websocket.onmessage = function(event) {
@@ -252,18 +372,15 @@
                 
                 websocket.onerror = function(error) {
                     updateStatusIndicator('#ff0000');
-                    console.log('WebSocket错误:', error);
                 };
                 
                 websocket.onclose = function() {
                     updateStatusIndicator('#ff9900');
-                    // 尝试重新连接
                     setTimeout(setupPriceWebSocket, 5000);
                 };
                 
             } catch (error) {
                 console.log('WebSocket初始化失败:', error);
-                // 使用HTTP备用方案
                 startPriceUpdate();
             }
         }
@@ -279,7 +396,6 @@
                             updatePriceDisplay(currentPrice);
                         })
                         .catch(error => {
-                            console.log('HTTP价格获取失败:', error);
                             updateStatusIndicator('#ff0000');
                         });
                 }
@@ -343,14 +459,8 @@
             }
         });
 
-        // 定时保存投票数据（防止数据丢失）
-        setInterval(() => {
-            try {
-                localStorage.setItem('tradingVotes', JSON.stringify(votes));
-            } catch (e) {
-                console.log('定时保存失败:', e);
-            }
-        }, 30000);
+        // 定时隐藏品牌元素
+        setInterval(hideBrandingElements, 3000);
     </script>
 </body>
 </html>
