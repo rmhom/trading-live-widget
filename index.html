@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>交易情绪看板</title>
+    <title>智能音乐交易看板</title>
     <style>
         body { margin: 0; padding: 10px; background: transparent; font-family: Arial, sans-serif; }
         .container { width: 500px; height: 350px; background: rgba(0, 0, 0, 0.95); border-radius: 10px; padding: 15px; border: 2px solid #333; }
@@ -85,7 +85,7 @@
             </div>
             
             <div class="music-area">
-                <div class="music-title">背景音乐（悲伤风格）</div>
+                <div class="music-title">智能背景音乐</div>
                 <div class="music-controls">
                     <button class="music-btn" onclick="toggleMusic()" id="musicToggle">🎵 点击启用音乐</button>
                     <div class="music-status" id="musicStatus">等待用户交互</div>
@@ -100,8 +100,31 @@
     <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
     
     <script>
-        // 只使用悲伤音乐
-        const SAD_MUSIC_URL = "sad.mp3";
+        // 使用您GitHub Pages上的音乐文件
+        // 请根据您的实际GitHub Pages URL修改下面的路径
+        const musicLibrary = {
+            happy: [
+                { 
+                    name: "欢快音乐", 
+                    url: "happy.mp3",  // 直接使用相对路径，确保文件在同一目录
+                    intensity: 1 
+                }
+            ],
+            neutral: [
+                { 
+                    name: "平和音乐", 
+                    url: "neutral.mp3", 
+                    intensity: 1 
+                }
+            ],
+            sad: [
+                { 
+                    name: "悲伤音乐", 
+                    url: "sad.mp3", 
+                    intensity: 1 
+                }
+            ]
+        };
 
         // 初始化变量
         let votes = {
@@ -114,7 +137,7 @@
         let currentIndex = 'btc';
         let globalVolume = 0.3;
         let audioInitialized = false;
-        let musicTimeout = null;
+        let currentMood = 'neutral';
 
         // 调试信息
         function debug(message) {
@@ -129,21 +152,40 @@
             initTradingView();
             setupIndexData();
             updateDisplay();
-            testMusicFile();
+            testMusicFiles(); // 测试音乐文件
         });
 
         // 测试音乐文件是否存在
-        function testMusicFile() {
-            debug('测试悲伤音乐文件...');
-            const audio = new Audio();
-            audio.src = SAD_MUSIC_URL;
+        function testMusicFiles() {
+            debug('测试音乐文件...');
+            const testFiles = ['happy.mp3', 'neutral.mp3', 'sad.mp3'];
+            let testedCount = 0;
+            let successCount = 0;
             
-            audio.addEventListener('canplaythrough', () => {
-                debug('✓ 悲伤音乐文件可正常加载');
-            });
-            
-            audio.addEventListener('error', () => {
-                debug('✗ 悲伤音乐文件加载失败 - 请检查sad.mp3文件');
+            testFiles.forEach(filename => {
+                const audio = new Audio();
+                audio.src = filename;
+                
+                audio.addEventListener('canplaythrough', () => {
+                    testedCount++;
+                    successCount++;
+                    debug(`✓ ${filename} 可正常加载 (${successCount}/${testFiles.length})`);
+                    if (testedCount === testFiles.length) {
+                        if (successCount === testFiles.length) {
+                            debug('所有音乐文件测试通过');
+                        } else {
+                            debug(`音乐文件测试完成，${successCount}/${testFiles.length} 个文件可用`);
+                        }
+                    }
+                });
+                
+                audio.addEventListener('error', (e) => {
+                    testedCount++;
+                    debug(`✗ ${filename} 加载失败 - ${e.target.error?.message || '文件不存在'}`);
+                    if (testedCount === testFiles.length) {
+                        debug(`音乐文件测试完成，${successCount}/${testFiles.length} 个文件可用`);
+                    }
+                });
             });
         }
 
@@ -154,6 +196,7 @@
                 debug('音频已激活 - 可以播放音乐');
                 document.getElementById('musicStatus').textContent = '音频就绪，点击播放';
                 
+                // 创建一个无声的音频来获得播放权限
                 const silentAudio = new Audio();
                 silentAudio.play().then(() => {
                     silentAudio.pause();
@@ -170,6 +213,7 @@
             document.querySelectorAll('.index-card').forEach(card => card.classList.remove('active'));
             event.currentTarget.classList.add('active');
             updateDisplay();
+            if (musicEnabled) updateMusicBasedOnMarket();
         }
 
         // 加载投票数据
@@ -191,44 +235,31 @@
             }
         }
 
-        // 投票功能 - 修复版，确保投票计数工作
+        // 投票功能
         function vote(color) {
-            debug(`投票: ${color}`);
-            
-            if (!votes[currentIndex]) {
-                votes[currentIndex] = { green: 0, white: 0, red: 0 };
-            }
-            
+            if (!votes[currentIndex]) votes[currentIndex] = { green: 0, white: 0, red: 0 };
             votes[currentIndex][color]++;
             saveVotes();
             updateDisplay();
             
             // 点击效果
             const light = document.querySelector(`.light.${color}`);
-            if (light) {
-                light.style.transform = 'scale(1.3)';
-                light.style.boxShadow = '0 0 15px gold';
-                setTimeout(() => {
-                    light.style.transform = 'scale(1)';
-                    light.style.boxShadow = 'none';
-                }, 300);
-            }
+            light.style.transform = 'scale(1.3)';
+            light.style.boxShadow = '0 0 15px gold';
+            setTimeout(() => {
+                light.style.transform = 'scale(1)';
+                light.style.boxShadow = 'none';
+            }, 300);
             
-            debug(`投票成功: ${color} 当前票数: ${votes[currentIndex][color]}`);
+            if (musicEnabled) updateMusicBasedOnVotes();
         }
 
         // 更新显示
         function updateDisplay() {
             const currentVotes = votes[currentIndex] || { green: 0, white: 0, red: 0 };
-            debug(`更新显示: ${JSON.stringify(currentVotes)}`);
-            
             ['green', 'white', 'red'].forEach(color => {
                 const count = currentVotes[color] || 0;
-                const countElement = document.getElementById(`${color}Count`);
-                if (countElement) {
-                    countElement.textContent = count;
-                }
-                
+                document.getElementById(`${color}Count`).textContent = count;
                 const light = document.querySelector(`.light.${color}`);
                 if (light) {
                     const level = Math.min(Math.floor(count / 2) + 1, 5);
@@ -237,17 +268,76 @@
             });
         }
 
-        // 播放3秒音乐片段
-        function play3SecondMusic() {
+        // 根据投票调整音乐
+        function updateMusicBasedOnVotes() {
             if (!musicEnabled) return;
             
-            debug('播放3秒悲伤音乐片段');
+            const currentVotes = votes[currentIndex] || { green: 0, white: 0, red: 0 };
             
+            let mood = 'neutral';
+            if (currentVotes.green > currentVotes.red && currentVotes.green > currentVotes.white) {
+                mood = 'happy';
+            } else if (currentVotes.red > currentVotes.green && currentVotes.red > currentVotes.white) {
+                mood = 'sad';
+            }
+            
+            if (mood !== currentMood) {
+                currentMood = mood;
+                playMusic(mood);
+            }
+        }
+
+        // 根据市场行情调整音乐
+        function updateMusicBasedOnMarket() {
+            if (!musicEnabled) return;
+            
+            const changes = {
+                btc: (Math.random() - 0.5) * 3,
+                sh: (Math.random() - 0.5) * 2,
+                spx: (Math.random() - 0.5) * 1.5
+            };
+            
+            const changePercent = changes[currentIndex] || 0;
+            
+            let mood = 'neutral';
+            if (changePercent > 0.5) mood = 'happy';
+            else if (changePercent < -0.5) mood = 'sad';
+            
+            if (mood !== currentMood) {
+                currentMood = mood;
+                playMusic(mood);
+            }
+        }
+
+        // 播放音乐
+        function playMusic(mood) {
+            debug(`尝试播放 ${mood} 音乐`);
+            
+            if (!musicEnabled) {
+                debug('音乐未启用');
+                return;
+            }
+
             // 停止当前音乐
-            stopMusic();
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio = null;
+            }
+
+            const availableTracks = musicLibrary[mood] || musicLibrary.neutral;
+            const selectedTrack = availableTracks[0];
+
+            if (!selectedTrack) {
+                debug('未找到音乐曲目');
+                return;
+            }
+
+            debug(`加载音乐: ${selectedTrack.url}`);
+            document.getElementById('musicStatus').textContent = '加载音乐中...';
 
             try {
-                currentAudio = new Audio(SAD_MUSIC_URL);
+                currentAudio = new Audio(selectedTrack.url);
+                currentAudio.loop = true;
                 currentAudio.volume = globalVolume;
                 
                 currentAudio.addEventListener('canplaythrough', function() {
@@ -255,25 +345,22 @@
                 });
                 
                 currentAudio.addEventListener('error', function(e) {
-                    debug('音乐加载错误: ' + e.target.error.message);
-                    document.getElementById('musicStatus').textContent = '音乐文件未找到';
+                    debug('音乐加载错误: ' + e.target.error?.message || '未知错误');
+                    document.getElementById('musicStatus').textContent = '音乐文件未找到: ' + selectedTrack.url;
+                });
+                
+                currentAudio.addEventListener('playing', function() {
+                    debug('音乐开始播放成功');
+                    const moodText = mood === 'happy' ? '🎉 欢快' : mood === 'sad' ? '😢 悲伤' : '😐 平和';
+                    document.getElementById('musicStatus').textContent = `${moodText} 音乐播放中`;
+                    document.getElementById('currentTrack').textContent = `${selectedTrack.name}`;
                 });
 
-                // 播放音乐
+                // 尝试播放
                 const playPromise = currentAudio.play();
                 if (playPromise !== undefined) {
                     playPromise.then(() => {
-                        debug('开始播放3秒音乐片段');
-                        document.getElementById('musicStatus').textContent = '悲伤音乐播放中 (3秒循环)';
-                        document.getElementById('currentTrack').textContent = '悲伤旋律 - 3秒循环';
-                        
-                        // 3秒后停止并重新播放
-                        musicTimeout = setTimeout(() => {
-                            stopMusic();
-                            // 立即重新播放
-                            setTimeout(play3SecondMusic, 100);
-                        }, 3000);
-                        
+                        debug('音乐播放成功');
                     }).catch(error => {
                         debug('播放被阻止: ' + error.message);
                         document.getElementById('musicStatus').textContent = '点击允许播放';
@@ -282,18 +369,6 @@
             } catch (error) {
                 debug('播放异常: ' + error.message);
                 document.getElementById('musicStatus').textContent = '播放失败';
-            }
-        }
-
-        // 停止音乐
-        function stopMusic() {
-            if (currentAudio) {
-                currentAudio.pause();
-                currentAudio = null;
-            }
-            if (musicTimeout) {
-                clearTimeout(musicTimeout);
-                musicTimeout = null;
             }
         }
 
@@ -310,12 +385,15 @@
             if (musicEnabled) {
                 toggleBtn.textContent = '⏹️ 停止音乐';
                 toggleBtn.style.background = 'linear-gradient(45deg, #ff6b6b, #ee5a24)';
-                debug('音乐已启用 - 开始3秒循环播放');
-                play3SecondMusic();
+                debug('音乐已启用');
+                updateMusicBasedOnMarket();
             } else {
                 toggleBtn.textContent = '🎵 播放音乐';
                 toggleBtn.style.background = 'linear-gradient(45deg, #667eea, #764ba2)';
-                stopMusic();
+                if (currentAudio) {
+                    currentAudio.pause();
+                    currentAudio = null;
+                }
                 document.getElementById('musicStatus').textContent = '音乐已停止';
                 document.getElementById('currentTrack').textContent = '-';
                 debug('音乐已停止');
@@ -353,6 +431,8 @@
                 updateIndexData('btc', 44984.74 + (Math.random() - 0.5) * 100, (Math.random() - 0.5) * 2);
                 updateIndexData('sh', 3199.88 + (Math.random() - 0.5) * 10, (Math.random() - 0.5) * 1);
                 updateIndexData('spx', 4450.32 + (Math.random() - 0.5) * 15, (Math.random() - 0.5) * 0.8);
+                
+                if (musicEnabled) updateMusicBasedOnMarket();
             }, 5000);
         }
 
@@ -370,17 +450,6 @@
                 statusElement.style.backgroundColor = changePercent > 0 ? '#00ff00' : changePercent < 0 ? '#ff0000' : '#cccccc';
             }
         }
-
-        // 添加事件监听器确保投票按钮工作
-        document.addEventListener('DOMContentLoaded', function() {
-            // 确保投票按钮有事件监听
-            document.querySelectorAll('.light').forEach(light => {
-                light.addEventListener('click', function() {
-                    const color = this.classList[1];
-                    vote(color);
-                });
-            });
-        });
     </script>
 </body>
 </html>
