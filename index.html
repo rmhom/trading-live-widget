@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -5,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>智能音乐交易看板</title>
     <style>
+        /* 样式保持不变 */
         body { margin: 0; padding: 10px; background: transparent; font-family: Arial, sans-serif; }
         .container { width: 500px; height: 350px; background: rgba(0, 0, 0, 0.95); border-radius: 10px; padding: 15px; border: 2px solid #333; }
         .indices-section { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 10px; }
@@ -101,12 +103,11 @@
     
     <script>
         // 使用您GitHub Pages上的音乐文件
-        // 请根据您的实际GitHub Pages URL修改下面的路径
         const musicLibrary = {
             happy: [
                 { 
                     name: "欢快音乐", 
-                    url: "happy.mp3",  // 直接使用相对路径，确保文件在同一目录
+                    url: "happy.mp3",
                     intensity: 1 
                 }
             ],
@@ -138,6 +139,7 @@
         let globalVolume = 0.3;
         let audioInitialized = false;
         let currentMood = 'neutral';
+        let musicFilesStatus = {};
 
         // 调试信息
         function debug(message) {
@@ -155,36 +157,50 @@
             testMusicFiles(); // 测试音乐文件
         });
 
-        // 测试音乐文件是否存在
+        // 测试音乐文件是否存在和可播放
         function testMusicFiles() {
             debug('测试音乐文件...');
-            const testFiles = ['happy.mp3', 'neutral.mp3', 'sad.mp3'];
-            let testedCount = 0;
-            let successCount = 0;
+            const testFiles = [
+                { name: 'happy.mp3', mood: 'happy' },
+                { name: 'neutral.mp3', mood: 'neutral' },
+                { name: 'sad.mp3', mood: 'sad' }
+            ];
             
-            testFiles.forEach(filename => {
+            testFiles.forEach(fileInfo => {
                 const audio = new Audio();
-                audio.src = filename;
+                audio.src = fileInfo.name;
+                audio.preload = 'metadata';
+                
+                let loadTimeout = setTimeout(() => {
+                    debug(`⏰ ${fileInfo.name} 加载超时`);
+                    musicFilesStatus[fileInfo.mood] = 'timeout';
+                }, 5000);
+                
+                audio.addEventListener('loadeddata', () => {
+                    clearTimeout(loadTimeout);
+                    musicFilesStatus[fileInfo.mood] = 'loaded';
+                    debug(`✓ ${fileInfo.name} 可正常加载 (时长: ${audio.duration.toFixed(1)}秒)`);
+                });
                 
                 audio.addEventListener('canplaythrough', () => {
-                    testedCount++;
-                    successCount++;
-                    debug(`✓ ${filename} 可正常加载 (${successCount}/${testFiles.length})`);
-                    if (testedCount === testFiles.length) {
-                        if (successCount === testFiles.length) {
-                            debug('所有音乐文件测试通过');
-                        } else {
-                            debug(`音乐文件测试完成，${successCount}/${testFiles.length} 个文件可用`);
-                        }
-                    }
+                    musicFilesStatus[fileInfo.mood] = 'playable';
+                    debug(`🎵 ${fileInfo.name} 可以播放`);
                 });
                 
                 audio.addEventListener('error', (e) => {
-                    testedCount++;
-                    debug(`✗ ${filename} 加载失败 - ${e.target.error?.message || '文件不存在'}`);
-                    if (testedCount === testFiles.length) {
-                        debug(`音乐文件测试完成，${successCount}/${testFiles.length} 个文件可用`);
+                    clearTimeout(loadTimeout);
+                    musicFilesStatus[fileInfo.mood] = 'error';
+                    const error = audio.error;
+                    let errorMsg = '未知错误';
+                    if (error) {
+                        switch(error.code) {
+                            case error.MEDIA_ERR_ABORTED: errorMsg = '播放被中止'; break;
+                            case error.MEDIA_ERR_NETWORK: errorMsg = '网络错误'; break;
+                            case error.MEDIA_ERR_DECODE: errorMsg = '解码错误'; break;
+                            case error.MEDIA_ERR_SRC_NOT_SUPPORTED: errorMsg = '格式不支持'; break;
+                        }
                     }
+                    debug(`✗ ${fileInfo.name} 加载失败 - ${errorMsg}`);
                 });
             });
         }
@@ -309,12 +325,19 @@
             }
         }
 
-        // 播放音乐
+        // 播放音乐 - 修复版本
         function playMusic(mood) {
             debug(`尝试播放 ${mood} 音乐`);
             
             if (!musicEnabled) {
                 debug('音乐未启用');
+                return;
+            }
+
+            // 检查文件状态
+            if (musicFilesStatus[mood] === 'error') {
+                debug(`音乐文件 ${mood}.mp3 不可用`);
+                document.getElementById('musicStatus').textContent = `音乐文件 ${mood}.mp3 不可用`;
                 return;
             }
 
@@ -340,13 +363,29 @@
                 currentAudio.loop = true;
                 currentAudio.volume = globalVolume;
                 
+                // 添加更多事件监听器来诊断问题
+                currentAudio.addEventListener('loadstart', () => debug('开始加载音频'));
+                currentAudio.addEventListener('progress', () => debug('音频加载进度更新'));
+                currentAudio.addEventListener('loadedmetadata', () => debug('音频元数据加载完成'));
+                currentAudio.addEventListener('canplay', () => debug('音频可以开始播放'));
+                
                 currentAudio.addEventListener('canplaythrough', function() {
-                    debug('音乐可以播放');
+                    debug('音乐可以完整播放');
                 });
                 
                 currentAudio.addEventListener('error', function(e) {
-                    debug('音乐加载错误: ' + e.target.error?.message || '未知错误');
-                    document.getElementById('musicStatus').textContent = '音乐文件未找到: ' + selectedTrack.url;
+                    const error = currentAudio.error;
+                    let errorMsg = '未知错误';
+                    if (error) {
+                        switch(error.code) {
+                            case error.MEDIA_ERR_ABORTED: errorMsg = '播放被中止'; break;
+                            case error.MEDIA_ERR_NETWORK: errorMsg = '网络错误'; break;
+                            case error.MEDIA_ERR_DECODE: errorMsg = '解码错误 - 文件可能损坏'; break;
+                            case error.MEDIA_ERR_SRC_NOT_SUPPORTED: errorMsg = '格式不支持'; break;
+                        }
+                    }
+                    debug(`音乐加载错误: ${errorMsg}`);
+                    document.getElementById('musicStatus').textContent = `播放错误: ${errorMsg}`;
                 });
                 
                 currentAudio.addEventListener('playing', function() {
@@ -356,19 +395,33 @@
                     document.getElementById('currentTrack').textContent = `${selectedTrack.name}`;
                 });
 
+                currentAudio.addEventListener('ended', function() {
+                    debug('音乐播放结束');
+                    if (currentAudio.loop) {
+                        debug('循环播放下一轮');
+                    }
+                });
+
+                currentAudio.addEventListener('timeupdate', function() {
+                    // 每10秒输出一次播放进度（用于调试）
+                    if (Math.floor(currentAudio.currentTime) % 10 === 0) {
+                        debug(`播放进度: ${currentAudio.currentTime.toFixed(1)}/${currentAudio.duration.toFixed(1)}秒`);
+                    }
+                });
+
                 // 尝试播放
                 const playPromise = currentAudio.play();
                 if (playPromise !== undefined) {
                     playPromise.then(() => {
-                        debug('音乐播放成功');
+                        debug('音乐播放成功启动');
                     }).catch(error => {
                         debug('播放被阻止: ' + error.message);
-                        document.getElementById('musicStatus').textContent = '点击允许播放';
+                        document.getElementById('musicStatus').textContent = '点击允许播放或检查文件';
                     });
                 }
             } catch (error) {
                 debug('播放异常: ' + error.message);
-                document.getElementById('musicStatus').textContent = '播放失败';
+                document.getElementById('musicStatus').textContent = '播放失败: ' + error.message;
             }
         }
 
@@ -386,7 +439,8 @@
                 toggleBtn.textContent = '⏹️ 停止音乐';
                 toggleBtn.style.background = 'linear-gradient(45deg, #ff6b6b, #ee5a24)';
                 debug('音乐已启用');
-                updateMusicBasedOnMarket();
+                // 延迟一点开始播放，确保音频上下文已准备就绪
+                setTimeout(() => updateMusicBasedOnMarket(), 100);
             } else {
                 toggleBtn.textContent = '🎵 播放音乐';
                 toggleBtn.style.background = 'linear-gradient(45deg, #667eea, #764ba2)';
@@ -449,6 +503,12 @@
             if (statusElement) {
                 statusElement.style.backgroundColor = changePercent > 0 ? '#00ff00' : changePercent < 0 ? '#ff0000' : '#cccccc';
             }
+        }
+
+        // 手动测试音乐播放的函数（用于调试）
+        function testPlay(mood) {
+            debug(`手动测试播放 ${mood} 音乐`);
+            playMusic(mood);
         }
     </script>
 </body>
