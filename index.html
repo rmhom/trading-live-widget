@@ -34,8 +34,6 @@
         .volume-control { width: 80%; margin: 3px 0; }
         .status-indicator { width: 6px; height: 6px; border-radius: 50%; display: inline-block; margin-left: 3px; }
         .debug-info { position: absolute; top: 5px; right: 5px; font-size: 8px; color: #666; }
-        .music-loading { color: #ffa500; animation: pulse 1s infinite; }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
     </style>
 </head>
 <body>
@@ -102,33 +100,30 @@
     <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
     
     <script>
-        // 使用GitHub Pages上的音乐文件
-        // 替换 YOUR_USERNAME 和 YOUR_REPOSITORY 为你的实际信息
-        const baseUrl = 'https://YOUR_USERNAME.github.io/YOUR_REPOSITORY';
-        
+        // 使用正确的文件名 - 根据你重命名后的文件
         const musicLibrary = {
-    happy: [
-        { 
-            name: "夏日阳光", 
-            url: "happy.mp3",  // 使用相对路径
-            intensity: 1 
-        }
-    ],
-    neutral: [
-        { 
-            name: "平和时光", 
-            url: "neutral.mp3",
-            intensity: 1 
-        }
-    ],
-    sad: [
-        { 
-            name: "忧郁雨天", 
-            url: "sad.mp3",
-            intensity: 1 
-        }
-    ]
-};
+            happy: [
+                { 
+                    name: "欢快音乐", 
+                    url: "happy.mp3",  // 使用英文文件名
+                    intensity: 1 
+                }
+            ],
+            neutral: [
+                { 
+                    name: "平和音乐", 
+                    url: "neutral.mp3",  // 使用英文文件名
+                    intensity: 1 
+                }
+            ],
+            sad: [
+                { 
+                    name: "悲伤音乐", 
+                    url: "sad.mp3",  // 使用英文文件名
+                    intensity: 1 
+                }
+            ]
+        };
 
         // 初始化变量
         let votes = {
@@ -150,41 +145,38 @@
 
         // 页面加载完成后执行
         window.addEventListener('load', function() {
-            debug('页面加载完成 - 请点击页面任意位置激活音频');
+            debug('页面加载完成 - 请点击页面任意位置');
             loadVotes();
             initTradingView();
             setupIndexData();
             updateDisplay();
-            preloadMusic();
+            testMusicFiles(); // 测试音乐文件
         });
 
-        // 预加载音乐文件
-        function preloadMusic() {
-            debug('开始预加载音乐文件...');
+        // 测试音乐文件是否存在
+        function testMusicFiles() {
+            debug('测试音乐文件...');
+            const testFiles = ['happy.mp3', 'neutral.mp3', 'sad.mp3'];
+            let testedCount = 0;
             
-            // 预加载所有音乐文件
-            const allTracks = Object.values(musicLibrary).flat();
-            let loadedCount = 0;
-            
-            allTracks.forEach(track => {
+            testFiles.forEach(filename => {
                 const audio = new Audio();
-                audio.src = track.url;
-                audio.preload = 'auto';
+                audio.src = filename;
                 
                 audio.addEventListener('canplaythrough', () => {
-                    loadedCount++;
-                    debug(`音乐预加载进度: ${loadedCount}/${allTracks.length}`);
-                    
-                    if (loadedCount === allTracks.length) {
-                        debug('所有音乐文件预加载完成');
-                        document.getElementById('musicStatus').textContent = '音乐就绪，点击播放';
+                    testedCount++;
+                    debug(`✓ ${filename} 可正常加载`);
+                    if (testedCount === testFiles.length) {
+                        debug('所有音乐文件测试通过');
                     }
                 });
                 
-                audio.addEventListener('error', (e) => {
-                    loadedCount++;
-                    debug(`音乐加载失败: ${track.name} - ${track.url}`);
-                    console.error('加载错误:', e);
+                audio.addEventListener('error', () => {
+                    testedCount++;
+                    debug(`✗ ${filename} 加载失败 - 请检查文件名`);
+                    if (testedCount === testFiles.length) {
+                        debug('音乐文件测试完成，有文件加载失败');
+                    }
                 });
             });
         }
@@ -194,6 +186,7 @@
             if (!audioInitialized) {
                 audioInitialized = true;
                 debug('音频已激活 - 可以播放音乐');
+                document.getElementById('musicStatus').textContent = '音频就绪，点击播放';
                 
                 // 创建一个无声的音频来获得播放权限
                 const silentAudio = new Audio();
@@ -280,12 +273,7 @@
                 mood = 'sad';
             }
             
-            const dominantVotes = Math.max(currentVotes.green, currentVotes.red, currentVotes.white);
-            let intensity = 1;
-            if (dominantVotes >= 5) intensity = 2;
-            if (dominantVotes >= 10) intensity = 3;
-            
-            playMusic(mood, intensity);
+            playMusic(mood, 1);
         }
 
         // 根据市场行情调整音乐
@@ -309,7 +297,7 @@
 
         // 播放音乐
         function playMusic(mood, intensity = 1) {
-            debug(`播放 ${mood} 音乐，强度: ${intensity}`);
+            debug(`尝试播放 ${mood} 音乐`);
             
             if (!musicEnabled) {
                 debug('音乐未启用');
@@ -323,43 +311,35 @@
             }
 
             const availableTracks = musicLibrary[mood] || musicLibrary.neutral;
-            const selectedTrack = availableTracks[Math.min(intensity - 1, availableTracks.length - 1)];
+            const selectedTrack = availableTracks[0];
 
             if (!selectedTrack) {
-                debug('未找到合适的音乐曲目');
+                debug('未找到音乐曲目');
                 return;
             }
 
-            debug(`加载音乐: ${selectedTrack.name} - ${selectedTrack.url}`);
+            debug(`加载音乐: ${selectedTrack.url}`);
             document.getElementById('musicStatus').textContent = '加载音乐中...';
-            document.getElementById('musicStatus').classList.add('music-loading');
 
             try {
                 currentAudio = new Audio(selectedTrack.url);
                 currentAudio.loop = true;
                 currentAudio.volume = globalVolume;
                 
-                currentAudio.addEventListener('loadeddata', function() {
-                    debug('音乐数据加载完成');
-                });
-                
                 currentAudio.addEventListener('canplaythrough', function() {
                     debug('音乐可以播放');
-                    document.getElementById('musicStatus').classList.remove('music-loading');
                 });
                 
                 currentAudio.addEventListener('error', function(e) {
                     debug('音乐加载错误: ' + e.target.error.message);
-                    document.getElementById('musicStatus').classList.remove('music-loading');
-                    document.getElementById('musicStatus').textContent = '音乐加载失败';
-                    console.error('音乐文件错误:', selectedTrack.url);
+                    document.getElementById('musicStatus').textContent = '音乐文件未找到: ' + selectedTrack.url;
                 });
                 
                 currentAudio.addEventListener('playing', function() {
                     debug('音乐开始播放成功');
                     const moodText = mood === 'happy' ? '🎉 欢快' : mood === 'sad' ? '😢 悲伤' : '😐 平和';
                     document.getElementById('musicStatus').textContent = `${moodText} 音乐播放中`;
-                    document.getElementById('currentTrack').textContent = `${selectedTrack.name} - 强度${intensity}`;
+                    document.getElementById('currentTrack').textContent = `${selectedTrack.name}`;
                 });
 
                 // 尝试播放
@@ -370,13 +350,11 @@
                     }).catch(error => {
                         debug('播放被阻止: ' + error.message);
                         document.getElementById('musicStatus').textContent = '点击允许播放';
-                        document.getElementById('musicStatus').classList.remove('music-loading');
                     });
                 }
             } catch (error) {
                 debug('播放异常: ' + error.message);
                 document.getElementById('musicStatus').textContent = '播放失败';
-                document.getElementById('musicStatus').classList.remove('music-loading');
             }
         }
 
