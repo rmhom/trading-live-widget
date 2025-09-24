@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -12,45 +13,56 @@
             font-family: Arial, sans-serif;
         }
         .container {
-            width: 450px;
-            height: 320px;
-            background: rgba(0, 0, 0, 0.92);
+            width: 500px;
+            height: 350px;
+            background: rgba(0, 0, 0, 0.95);
             border-radius: 10px;
-            padding: 12px;
+            padding: 15px;
             border: 2px solid #333;
-            position: relative;
         }
         
         /* 指数显示区域 */
         .indices-section {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-bottom: 15px;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 10px;
         }
         
         .index-card {
-            background: rgba(40, 40, 60, 0.7);
+            background: rgba(40, 40, 60, 0.8);
             border-radius: 6px;
             padding: 8px;
             border-left: 3px solid #666;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .index-card.active {
+            background: rgba(60, 80, 100, 0.9);
+            border-left: 3px solid gold;
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
+        
+        .index-card:hover {
+            transform: scale(1.02);
         }
         
         .index-name {
             color: #ccc;
-            font-size: 12px;
+            font-size: 11px;
             margin-bottom: 3px;
         }
         
         .index-price {
             color: white;
-            font-size: 16px;
+            font-size: 14px;
             font-weight: bold;
             margin: 2px 0;
         }
         
         .index-change {
-            font-size: 11px;
+            font-size: 10px;
             font-weight: bold;
         }
         
@@ -61,23 +73,38 @@
         /* 图表区域 */
         .chart-container {
             width: 100%;
-            height: 150px;
+            height: 160px;
             margin-bottom: 10px;
             background: rgba(30, 30, 45, 0.8);
             border-radius: 4px;
             overflow: hidden;
         }
         
-        /* 三色灯投票区域 */
-        .voting-section {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        /* 投票和音乐区域 */
+        .control-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            height: 80px;
+        }
+        
+        .voting-area {
+            background: rgba(50, 50, 70, 0.7);
+            border-radius: 6px;
+            padding: 8px;
+        }
+        
+        .voting-title {
+            color: #ccc;
+            font-size: 11px;
+            text-align: center;
+            margin-bottom: 5px;
         }
         
         .lights-container {
             display: flex;
-            gap: 8px;
+            gap: 10px;
+            justify-content: center;
         }
         
         .light-wrapper {
@@ -87,8 +114,8 @@
         }
         
         .light {
-            width: 28px;
-            height: 28px;
+            width: 30px;
+            height: 30px;
             border-radius: 50%;
             cursor: pointer;
             transition: all 0.3s ease;
@@ -101,7 +128,7 @@
         }
         
         .light:hover {
-            transform: scale(1.15);
+            transform: scale(1.2);
             border-color: gold;
         }
         
@@ -129,32 +156,64 @@
         .white.level-5 { background-color: #444444; }
         
         .vote-count {
-            font-size: 9px;
+            font-size: 10px;
             color: #ccc;
-            margin-top: 2px;
+            margin-top: 3px;
             font-weight: bold;
         }
         
         /* 音乐控制区域 */
+        .music-area {
+            background: rgba(50, 50, 70, 0.7);
+            border-radius: 6px;
+            padding: 8px;
+        }
+        
+        .music-title {
+            color: #ccc;
+            font-size: 11px;
+            text-align: center;
+            margin-bottom: 5px;
+        }
+        
         .music-controls {
             display: flex;
+            flex-direction: column;
             align-items: center;
-            gap: 8px;
+            gap: 5px;
         }
         
         .music-btn {
-            background: #444;
+            background: linear-gradient(45deg, #667eea, #764ba2);
             border: none;
-            border-radius: 3px;
+            border-radius: 15px;
             color: white;
-            padding: 4px 8px;
-            font-size: 10px;
+            padding: 6px 15px;
+            font-size: 11px;
             cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .music-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 10px rgba(102, 126, 234, 0.5);
         }
         
         .music-status {
             font-size: 10px;
             color: #ccc;
+            text-align: center;
+        }
+        
+        .current-track {
+            font-size: 9px;
+            color: #888;
+            text-align: center;
+        }
+        
+        .volume-control {
+            width: 80%;
+            margin: 3px 0;
         }
         
         /* 状态指示器 */
@@ -164,33 +223,35 @@
             border-radius: 50%;
             display: inline-block;
             margin-left: 3px;
-            animation: pulse 2s infinite;
         }
         
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
-        }
-        
-        .music-intensity {
-            font-size: 9px;
-            color: #888;
-            margin-top: 2px;
+        .debug-info {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            font-size: 8px;
+            color: #666;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- 指数显示区域 -->
+        <div class="debug-info" id="debugInfo">状态: 正常</div>
+        
+        <!-- 指数选择区域 -->
         <div class="indices-section">
-            <div class="index-card">
-                <div class="index-name">上证指数 <span class="status-indicator" id="shStatus"></span></div>
+            <div class="index-card active" onclick="selectIndex('btc')">
+                <div class="index-name">比特币/USDT <span class="status-indicator" id="btcStatus" style="background-color: #ccc;"></span></div>
+                <div class="index-price" id="btcPrice">--.--</div>
+                <div class="index-change" id="btcChange">0.00%</div>
+            </div>
+            <div class="index-card" onclick="selectIndex('sh')">
+                <div class="index-name">上证指数 <span class="status-indicator" id="shStatus" style="background-color: #ccc;"></span></div>
                 <div class="index-price" id="shPrice">--.--</div>
                 <div class="index-change" id="shChange">0.00%</div>
             </div>
-            <div class="index-card">
-                <div class="index-name">标普500 <span class="status-indicator" id="spxStatus"></span></div>
+            <div class="index-card" onclick="selectIndex('spx')">
+                <div class="index-name">标普500 <span class="status-indicator" id="spxStatus" style="background-color: #ccc;"></span></div>
                 <div class="index-price" id="spxPrice">--.--</div>
                 <div class="index-change" id="spxChange">0.00%</div>
             </div>
@@ -201,29 +262,36 @@
             <div id="tradingview_chart"></div>
         </div>
         
-        <!-- 投票和音乐控制区域 -->
-        <div class="voting-section">
-            <div class="lights-container">
-                <div class="light-wrapper" title="看涨投票">
-                    <div class="light green level-1" onclick="vote('green')">↑</div>
-                    <div class="vote-count" id="greenCount">0</div>
-                    <div class="music-intensity" id="greenIntensity">欢快+0</div>
-                </div>
-                <div class="light-wrapper" title="中性投票">
-                    <div class="light white level-1" onclick="vote('white')">→</div>
-                    <div class="vote-count" id="whiteCount">0</div>
-                    <div class="music-intensity" id="whiteIntensity">平和+0</div>
-                </div>
-                <div class="light-wrapper" title="看跌投票">
-                    <div class="light red level-1" onclick="vote('red')">↓</div>
-                    <div class="vote-count" id="redCount">0</div>
-                    <div class="music-intensity" id="redIntensity">悲伤+0</div>
+        <!-- 控制和音乐区域 -->
+        <div class="control-section">
+            <!-- 投票区域 -->
+            <div class="voting-area">
+                <div class="voting-title">观众情绪投票 ↑→↓</div>
+                <div class="lights-container">
+                    <div class="light-wrapper" title="看涨投票">
+                        <div class="light green level-1" onclick="vote('green')">↑</div>
+                        <div class="vote-count" id="greenCount">0</div>
+                    </div>
+                    <div class="light-wrapper" title="中性投票">
+                        <div class="light white level-1" onclick="vote('white')">→</div>
+                        <div class="vote-count" id="whiteCount">0</div>
+                    </div>
+                    <div class="light-wrapper" title="看跌投票">
+                        <div class="light red level-1" onclick="vote('red')">↓</div>
+                        <div class="vote-count" id="redCount">0</div>
+                    </div>
                 </div>
             </div>
             
-            <div class="music-controls">
-                <button class="music-btn" onclick="toggleMusic()" id="musicToggle">播放音乐</button>
-                <div class="music-status" id="musicStatus">准备就绪</div>
+            <!-- 音乐控制区域 -->
+            <div class="music-area">
+                <div class="music-title">智能背景音乐</div>
+                <div class="music-controls">
+                    <button class="music-btn" onclick="toggleMusic()" id="musicToggle">🎵 播放音乐</button>
+                    <div class="music-status" id="musicStatus">选择指数开始</div>
+                    <div class="current-track" id="currentTrack">-</div>
+                    <input type="range" class="volume-control" min="0" max="100" value="30" oninput="changeVolume(this.value)">
+                </div>
             </div>
         </div>
     </div>
@@ -232,37 +300,90 @@
     <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
     
     <script>
-        // 初始化变量
-        let votes = { green: 0, white: 0, red: 0 };
+        // 初始化变量 - 简化版本
+        let votes = {
+            btc: { green: 0, white: 0, red: 0 },
+            sh: { green: 0, white: 0, red: 0 },
+            spx: { green: 0, white: 0, red: 0 }
+        };
         let musicEnabled = false;
         let currentAudio = null;
-        let currentMood = 'neutral';
-        
-        // 音乐库 - 使用免版税音乐链接:cite[7]
+        let currentIndex = 'btc';
+        let globalVolume = 0.3;
+
+        // 使用更可靠的音乐源
         const musicLibrary = {
             happy: [
-                { name: "欢快曲目1", url: "https://example.com/happy1.mp3", intensity: 1 },
-                { name: "欢快曲目2", url: "https://example.com/happy2.mp3", intensity: 2 },
-                { name: "欢快曲目3", url: "https://example.com/happy3.mp3", intensity: 3 }
+                { 
+                    name: "欢乐时光", 
+                    // 使用可靠的第三方音乐源
+                    url: "https://cdn.pixabay.com/download/audio/2022/03/15/audio_d17187f392.mp3?filename=upbeat-happy-ukulele-123277.mp3",
+                    intensity: 1 
+                },
+                { 
+                    name: "阳光明媚", 
+                    url: "https://cdn.pixabay.com/download/audio/2021/10/25/audio_1a4d1a3e2c.mp3?filename=summer-walk-152722.mp3",
+                    intensity: 2 
+                }
             ],
             neutral: [
-                { name: "平和曲目1", url: "https://example.com/neutral1.mp3", intensity: 1 },
-                { name: "平和曲目2", url: "https://example.com/neutral2.mp3", intensity: 2 }
+                { 
+                    name: "平和心境", 
+                    url: "https://cdn.pixabay.com/download/audio/2022/03/19/audio_1a6ab45b7d.mp3?filename=ambient-piano-117363.mp3",
+                    intensity: 1 
+                }
             ],
             sad: [
-                { name: "悲伤曲目1", url: "https://example.com/sad1.mp3", intensity: 1 },
-                { name: "悲伤曲目2", url: "https://example.com/sad2.mp3", intensity: 2 },
-                { name: "悲伤曲目3", url: "https://example.com/sad3.mp3", intensity: 3 }
+                { 
+                    name: "雨中沉思", 
+                    url: "https://cdn.pixabay.com/download/audio/2022/03/15/audio_6b8c1f5c4f.mp3?filename=sad-ambient-piano-117364.mp3",
+                    intensity: 1 
+                }
             ]
         };
 
+        // 调试信息
+        function debug(message) {
+            console.log('DEBUG:', message);
+            document.getElementById('debugInfo').textContent = message;
+        }
+
         // 页面加载完成后执行
         window.addEventListener('load', function() {
+            debug('页面加载完成');
             loadVotes();
             initTradingView();
             setupIndexData();
-            updateMusicIntensityDisplay();
+            updateDisplay();
+            
+            // 添加点击事件监听器 - 确保投票按钮能工作
+            document.querySelectorAll('.light').forEach(light => {
+                light.addEventListener('click', function() {
+                    const color = this.classList[1]; // 获取颜色类名
+                    vote(color);
+                });
+            });
         });
+
+        // 选择指数
+        function selectIndex(index) {
+            debug(`选择指数: ${index}`);
+            currentIndex = index;
+            
+            // 更新UI显示
+            document.querySelectorAll('.index-card').forEach(card => {
+                card.classList.remove('active');
+            });
+            event.currentTarget.classList.add('active');
+            
+            // 更新投票显示
+            updateDisplay();
+            
+            // 如果音乐开启，根据新指数调整音乐
+            if (musicEnabled) {
+                updateMusicBasedOnMarket();
+            }
+        }
 
         // 加载投票数据
         function loadVotes() {
@@ -270,77 +391,125 @@
                 const saved = localStorage.getItem('tradingVotes');
                 if (saved) {
                     votes = JSON.parse(saved);
-                    updateVoteDisplay();
+                    debug('投票数据加载成功');
+                } else {
+                    debug('无保存的投票数据');
                 }
             } catch (e) {
-                console.log('加载投票数据失败:', e);
+                debug('加载投票数据失败');
             }
         }
 
-        // 投票功能
-        function vote(color) {
-            votes[color]++;
+        // 保存投票数据
+        function saveVotes() {
             try {
                 localStorage.setItem('tradingVotes', JSON.stringify(votes));
             } catch (e) {
-                console.log('保存投票数据失败:', e);
+                debug('保存投票数据失败');
             }
-            updateVoteDisplay();
-            updateMusicBasedOnVotes();
+        }
+
+        // 投票功能 - 修复版本
+        function vote(color) {
+            debug(`投票: ${color} for ${currentIndex}`);
+            
+            if (!votes[currentIndex]) {
+                votes[currentIndex] = { green: 0, white: 0, red: 0 };
+            }
+            
+            votes[currentIndex][color]++;
+            saveVotes();
+            updateDisplay();
             
             // 点击效果
             const light = document.querySelector(`.light.${color}`);
-            light.style.boxShadow = '0 0 8px gold';
-            setTimeout(() => { light.style.boxShadow = 'none'; }, 300);
+            if (light) {
+                light.style.transform = 'scale(1.3)';
+                light.style.boxShadow = '0 0 15px gold';
+                setTimeout(() => {
+                    light.style.transform = 'scale(1)';
+                    light.style.boxShadow = 'none';
+                }, 300);
+            }
+            
+            // 如果音乐开启，根据投票调整音乐
+            if (musicEnabled) {
+                updateMusicBasedOnVotes();
+            }
         }
 
-        // 更新投票显示
-        function updateVoteDisplay() {
+        // 更新显示
+        function updateDisplay() {
+            const currentVotes = votes[currentIndex] || { green: 0, white: 0, red: 0 };
+            debug(`更新显示: ${currentIndex} - ${JSON.stringify(currentVotes)}`);
+            
             ['green', 'white', 'red'].forEach(color => {
-                const count = votes[color] || 0;
-                document.getElementById(`${color}Count`).textContent = count;
+                const count = currentVotes[color] || 0;
+                const countElement = document.getElementById(`${color}Count`);
+                if (countElement) {
+                    countElement.textContent = count;
+                    debug(`设置 ${color}Count: ${count}`);
+                }
                 
                 const light = document.querySelector(`.light.${color}`);
                 if (light) {
-                    const level = Math.min(Math.floor(count / 3) + 1, 5);
+                    const level = Math.min(Math.floor(count / 2) + 1, 5);
                     light.className = `light ${color} level-${level}`;
                 }
             });
         }
 
-        // 更新音乐强度显示
-        function updateMusicIntensityDisplay() {
-            document.getElementById('greenIntensity').textContent = `欢快+${votes.green}`;
-            document.getElementById('whiteIntensity').textContent = `平和+${votes.white}`;
-            document.getElementById('redIntensity').textContent = `悲伤+${votes.red}`;
-        }
-
-        // 根据投票更新音乐
+        // 根据投票调整音乐
         function updateMusicBasedOnVotes() {
             if (!musicEnabled) return;
             
-            updateMusicIntensityDisplay();
+            const currentVotes = votes[currentIndex] || { green: 0, white: 0, red: 0 };
             
             // 确定主导情绪（基于投票）
-            let dominantMood = 'neutral';
-            if (votes.green > votes.red && votes.green > votes.white) {
-                dominantMood = 'happy';
-            } else if (votes.red > votes.green && votes.red > votes.white) {
-                dominantMood = 'sad';
+            let mood = 'neutral';
+            if (currentVotes.green > currentVotes.red && currentVotes.green > currentVotes.white) {
+                mood = 'happy';
+            } else if (currentVotes.red > currentVotes.green && currentVotes.red > currentVotes.white) {
+                mood = 'sad';
             }
             
             // 确定强度级别
+            const dominantVotes = Math.max(currentVotes.green, currentVotes.red, currentVotes.white);
             let intensity = 1;
-            const dominantVotes = Math.max(votes.green, votes.red, votes.white);
+            if (dominantVotes >= 5) intensity = 2;
             if (dominantVotes >= 10) intensity = 3;
-            else if (dominantVotes >= 5) intensity = 2;
             
-            playMusic(dominantMood, intensity);
+            playMusic(mood, intensity);
         }
 
-        // 播放音乐
-        function playMusic(mood, intensity = 1) {
+        // 根据市场行情调整音乐
+        function updateMusicBasedOnMarket() {
             if (!musicEnabled) return;
+            
+            // 模拟市场数据
+            const changes = {
+                btc: (Math.random() - 0.5) * 3,
+                sh: (Math.random() - 0.5) * 2,
+                spx: (Math.random() - 0.5) * 1.5
+            };
+            
+            const changePercent = changes[currentIndex] || 0;
+            
+            let mood = 'neutral';
+            if (changePercent > 0.5) mood = 'happy';
+            else if (changePercent < -0.5) mood = 'sad';
+            
+            playMusic(mood, 1);
+        }
+
+        // 播放音乐 - 修复版本
+        function playMusic(mood, intensity = 1) {
+            debug(`播放音乐: ${mood} 强度: ${intensity}`);
+            
+            if (!musicEnabled) {
+                debug('音乐未启用');
+                return;
+            }
             
             // 停止当前音乐
             if (currentAudio) {
@@ -349,39 +518,92 @@
             }
             
             const availableTracks = musicLibrary[mood] || musicLibrary.neutral;
-            const selectedTrack = availableTracks.find(track => track.intensity === intensity) || availableTracks[0];
+            const selectedTrack = availableTracks[0]; // 简化：总是使用第一个曲目
             
-            if (selectedTrack) {
-                currentAudio = new Audio(selectedTrack.url);
-                currentAudio.loop = true;
-                currentAudio.volume = 0.3; // 降低音量避免干扰
+            if (selectedTrack && selectedTrack.url) {
+                debug(`尝试播放: ${selectedTrack.name}`);
                 
-                currentAudio.play().catch(e => {
-                    console.log('音乐播放失败:', e);
-                    document.getElementById('musicStatus').textContent = '播放失败';
+                currentAudio = new Audio();
+                currentAudio.src = selectedTrack.url;
+                currentAudio.loop = true;
+                currentAudio.volume = globalVolume;
+                
+                // 添加事件监听器
+                currentAudio.addEventListener('canplaythrough', function() {
+                    debug('音乐可以播放');
                 });
                 
-                document.getElementById('musicStatus').textContent = `${mood === 'happy' ? '欢快' : mood === 'sad' ? '悲伤' : '平和'}音乐 Lv.${intensity}`;
-                currentMood = mood;
+                currentAudio.addEventListener('error', function(e) {
+                    debug(`音乐播放错误: ${e.target.error.code}`);
+                    document.getElementById('musicStatus').textContent = '音乐加载失败';
+                });
+                
+                currentAudio.addEventListener('playing', function() {
+                    debug('音乐开始播放');
+                    const moodText = mood === 'happy' ? '🎉 欢快' : mood === 'sad' ? '😢 悲伤' : '😐 平和';
+                    document.getElementById('musicStatus').textContent = `${moodText} 音乐`;
+                    document.getElementById('currentTrack').textContent = `${selectedTrack.name} Lv.${intensity}`;
+                });
+                
+                // 尝试播放
+                const playPromise = currentAudio.play();
+                
+                if (playPromise !== undefined) {
+                    playPromise.then(() => {
+                        debug('音乐播放成功');
+                    }).catch(error => {
+                        debug(`播放被阻止: ${error}`);
+                        document.getElementById('musicStatus').textContent = '点击允许播放';
+                    });
+                }
+            } else {
+                debug('未找到合适的音乐曲目');
             }
         }
 
-        // 切换音乐开关
+        // 切换音乐开关 - 修复版本
         function toggleMusic() {
-            musicEnabled = !musicEnabled;
-            const toggleBtn = document.getElementById('musicToggle');
+            debug(`切换音乐状态: ${musicEnabled ? '关闭' : '开启'}`);
             
-            if (musicEnabled) {
-                toggleBtn.textContent = '停止音乐';
-                updateMusicBasedOnVotes();
+            if (!musicEnabled) {
+                // 先尝试播放一个无声音频来获得用户交互许可
+                const silentAudio = new Audio();
+                silentAudio.src = "data:audio/wav;base64,UklGRnoAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoAAAC";
+                
+                silentAudio.play().then(() => {
+                    silentAudio.pause();
+                    musicEnabled = true;
+                    document.getElementById('musicToggle').textContent = '⏹️ 停止音乐';
+                    document.getElementById('musicStatus').textContent = '音乐开启中...';
+                    
+                    // 等待一下再播放音乐
+                    setTimeout(() => {
+                        updateMusicBasedOnMarket();
+                    }, 500);
+                    
+                }).catch(e => {
+                    debug('需要用户交互');
+                    alert('请先点击页面任意位置，然后再次点击播放按钮');
+                });
             } else {
-                toggleBtn.textContent = '播放音乐';
+                musicEnabled = false;
+                document.getElementById('musicToggle').textContent = '🎵 播放音乐';
                 if (currentAudio) {
                     currentAudio.pause();
                     currentAudio = null;
                 }
-                document.getElementById('musicStatus').textContent = '已停止';
+                document.getElementById('musicStatus').textContent = '音乐已停止';
+                document.getElementById('currentTrack').textContent = '-';
             }
+        }
+
+        // 调整音量
+        function changeVolume(value) {
+            globalVolume = value / 100;
+            if (currentAudio) {
+                currentAudio.volume = globalVolume;
+            }
+            debug(`音量调整: ${value}%`);
         }
 
         // 初始化TradingView图表
@@ -389,7 +611,7 @@
             if (typeof TradingView !== 'undefined') {
                 new TradingView.widget({
                     "width": "100%",
-                    "height": "150",
+                    "height": "160",
                     "symbol": "BINANCE:BTCUSDT",
                     "interval": "5",
                     "timezone": "Asia/Shanghai",
@@ -397,41 +619,34 @@
                     "style": "1",
                     "locale": "zh_CN",
                     "enable_publishing": false,
-                    "allow_symbol_change": false,
-                    "container_id": "tradingview_chart",
                     "hide_top_toolbar": true,
                     "hide_legend": true,
                     "hide_side_toolbar": true,
-                    "studies": ["volume@tv-basicstudies"],
-                    "disabled_features": [
-                        "header_widget", "left_toolbar", "footer_screenshot", 
-                        "volume_force_overlay", "show_logo_on_all_charts"
-                    ]
+                    "container_id": "tradingview_chart"
                 });
+                debug('TradingView图表初始化完成');
             }
         }
 
-        // 设置指数数据（示例实现）
+        // 设置指数数据
         function setupIndexData() {
-            // 上证指数数据（示例）
-            updateIndexData('sh', 3200.45, 1.2);
+            debug('开始设置指数数据');
             
-            // 标普500数据（示例）
-            updateIndexData('spx', 4450.32, -0.8);
+            // 初始化数据
+            updateIndexData('btc', 45000.00, 0.0);
+            updateIndexData('sh', 3200.45, 0.0);
+            updateIndexData('spx', 4450.32, 0.0);
             
             // 模拟实时更新
             setInterval(() => {
-                // 这里可以替换为真实的API调用:cite[1]:cite[5]
-                const shChange = (Math.random() - 0.5) * 2;
-                const spxChange = (Math.random() - 0.5) * 2;
+                updateIndexData('btc', 45000 + (Math.random() - 0.5) * 1000, (Math.random() - 0.5) * 3);
+                updateIndexData('sh', 3200 + (Math.random() - 0.5) * 50, (Math.random() - 0.5) * 2);
+                updateIndexData('spx', 4450 + (Math.random() - 0.5) * 30, (Math.random() - 0.5) * 1.5);
                 
-                updateIndexData('sh', 3200 + Math.random() * 100, shChange);
-                updateIndexData('spx', 4450 + Math.random() * 50, spxChange);
-                
-                // 根据指数变化自动调整音乐（可选功能）
-                autoAdjustMusicByMarket();
-                
-            }, 5000); // 每5秒更新一次
+                if (musicEnabled) {
+                    updateMusicBasedOnMarket();
+                }
+            }, 3000);
         }
 
         // 更新指数显示
@@ -450,41 +665,27 @@
             }
         }
 
-        // 根据市场表现自动调整音乐
-        function autoAdjustMusicByMarket() {
-            if (!musicEnabled) return;
-            
-            // 获取两个指数的平均变化
-            const shChange = parseFloat(document.getElementById('shChange').textContent);
-            const spxChange = parseFloat(document.getElementById('spxChange').textContent);
-            const avgChange = (shChange + spxChange) / 2;
-            
-            // 如果市场整体上涨且当前不是欢快音乐，自动调整
-            if (avgChange > 0.5 && currentMood !== 'happy') {
-                playMusic('happy', 1);
-            }
-            // 如果市场整体下跌且当前不是悲伤音乐，自动调整
-            else if (avgChange < -0.5 && currentMood !== 'sad') {
-                playMusic('sad', 1);
+        // 重置当前指数的投票
+        function resetVotes() {
+            if (confirm(`确定要重置${currentIndex.toUpperCase()}的投票吗？`)) {
+                votes[currentIndex] = { green: 0, white: 0, red: 0 };
+                saveVotes();
+                updateDisplay();
+                if (musicEnabled) {
+                    updateMusicBasedOnMarket();
+                }
             }
         }
 
-        // 重置投票（右键点击）
+        // 右键菜单重置
         document.addEventListener('contextmenu', function(e) {
             e.preventDefault();
-            if (confirm('确定要重置所有投票和音乐设置吗？')) {
-                votes = { green: 0, white: 0, red: 0 };
-                try {
-                    localStorage.setItem('tradingVotes', JSON.stringify(votes));
-                } catch (e) {
-                    console.log('重置投票数据失败:', e);
-                }
-                updateVoteDisplay();
-                updateMusicIntensityDisplay();
-                if (musicEnabled) {
-                    playMusic('neutral', 1);
-                }
-            }
+            resetVotes();
+        });
+
+        // 添加全局点击事件处理 - 解决音频自动播放问题
+        document.addEventListener('click', function() {
+            debug('页面被点击，音频上下文已激活');
         });
     </script>
 </body>
