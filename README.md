@@ -1,1 +1,245 @@
-# trading-live-widget
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        .container {
+            width: 400px;
+            height: 300px;
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 10px;
+            padding: 10px;
+            font-family: Arial, sans-serif;
+        }
+        
+        /* 交易视图容器 */
+        .tradingview-widget {
+            width: 100%;
+            height: 200px;
+            margin-bottom: 10px;
+        }
+        
+        /* 三色灯样式 */
+        .lights-container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 10px;
+        }
+        
+        .light {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid #333;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: black;
+        }
+        
+        .light:hover {
+            transform: scale(1.1);
+        }
+        
+        .green { background-color: #00ff00; }
+        .red { background-color: #ff0000; }
+        .white { background-color: #ffffff; }
+        
+        /* 颜色深度级别 */
+        .green.level-1 { background-color: #00ff00; }
+        .green.level-2 { background-color: #00cc00; }
+        .green.level-3 { background-color: #009900; }
+        .green.level-4 { background-color: #006600; }
+        .green.level-5 { background-color: #004400; }
+        
+        .red.level-1 { background-color: #ff0000; }
+        .red.level-2 { background-color: #cc0000; }
+        .red.level-3 { background-color: #990000; }
+        .red.level-4 { background-color: #660000; }
+        .red.level-5 { background-color: #440000; }
+        
+        .white.level-1 { background-color: #ffffff; }
+        .white.level-2 { background-color: #cccccc; }
+        .white.level-3 { background-color: #999999; }
+        .white.level-4 { background-color: #666666; }
+        .white.level-5 { background-color: #444444; }
+        
+        /* 价格显示 */
+        .price-display {
+            text-align: center;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .vote-count {
+            font-size: 12px;
+            position: absolute;
+            bottom: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- TradingView图表 -->
+        <div class="tradingview-widget">
+            <div id="tradingview_chart"></div>
+        </div>
+        
+        <!-- 三色灯 -->
+        <div class="lights-container">
+            <div class="light green level-1" onclick="vote('green')">
+                ↑
+                <div class="vote-count" id="greenCount">0</div>
+            </div>
+            <div class="light white level-1" onclick="vote('white')">
+                →
+                <div class="vote-count" id="whiteCount">0</div>
+            </div>
+            <div class="light red level-1" onclick="vote('red')">
+                ↓
+                <div class="vote-count" id="redCount">0</div>
+            </div>
+        </div>
+        
+        <!-- 实时价格显示 -->
+        <div class="price-display">
+            BTC/USDT: <span id="currentPrice">加载中...</span>
+            <span id="priceChange" style="font-size: 14px;"></span>
+        </div>
+    </div>
+
+    <!-- TradingView脚本 -->
+    <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+    
+    <script>
+        // 投票数据
+        let votes = { green: 0, white: 0, red: 0 };
+        let lastPrice = 0;
+        let currentTrend = 'white';
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            loadVotes();
+            initTradingView();
+            setupWebSocket();
+            updateTrendIndicator();
+        });
+
+        // 加载保存的投票数据
+        function loadVotes() {
+            const saved = localStorage.getItem('tradingVotes');
+            if (saved) {
+                votes = JSON.parse(saved);
+                updateVoteDisplay();
+            }
+        }
+
+        // 投票功能
+        function vote(color) {
+            votes[color]++;
+            localStorage.setItem('tradingVotes', JSON.stringify(votes));
+            updateVoteDisplay();
+            
+            // 点击动画
+            const light = document.querySelector(`.light.${color}`);
+            light.style.transform = 'scale(1.2)';
+            setTimeout(() => { light.style.transform = 'scale(1)'; }, 200);
+        }
+
+        // 更新投票显示
+        function updateVoteDisplay() {
+            ['green', 'white', 'red'].forEach(color => {
+                const count = votes[color];
+                document.getElementById(`${color}Count`).textContent = count;
+                
+                const light = document.querySelector(`.light.${color}`);
+                const level = Math.min(Math.floor(count / 3) + 1, 5);
+                light.className = `light ${color} level-${level}`;
+            });
+        }
+
+        // 初始化TradingView图表
+        function initTradingView() {
+            new TradingView.widget({
+                "autosize": true,
+                "symbol": "BINANCE:BTCUSDT",
+                "interval": "5",
+                "timezone": "Etc/UTC",
+                "theme": "dark",
+                "style": "1",
+                "locale": "zh_CN",
+                "toolbar_bg": "#f1f3f6",
+                "enable_publishing": false,
+                "hide_top_toolbar": true,
+                "hide_legend": true,
+                "save_image": false,
+                "container_id": "tradingview_chart"
+            });
+        }
+
+        // WebSocket获取实时价格
+        function setupWebSocket() {
+            const ws = new WebSocket('wss://stream.binance.com:9443/ws/btcusdt@trade');
+            
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                const currentPrice = parseFloat(data.p);
+                
+                document.getElementById('currentPrice').textContent = currentPrice.toFixed(2);
+                
+                if (lastPrice > 0) {
+                    const change = currentPrice - lastPrice;
+                    const changeElement = document.getElementById('priceChange');
+                    
+                    if (change > 0) {
+                        changeElement.textContent = `+${change.toFixed(2)}`;
+                        changeElement.style.color = '#00ff00';
+                        currentTrend = 'green';
+                    } else if (change < 0) {
+                        changeElement.textContent = `${change.toFixed(2)}`;
+                        changeElement.style.color = '#ff0000';
+                        currentTrend = 'red';
+                    } else {
+                        changeElement.textContent = '0.00';
+                        changeElement.style.color = '#ffffff';
+                        currentTrend = 'white';
+                    }
+                }
+                
+                lastPrice = currentPrice;
+                updateTrendIndicator();
+            };
+        }
+
+        // 更新趋势指示器
+        function updateTrendIndicator() {
+            document.getElementById('priceChange').style.display = 'inline';
+        }
+
+        // 重置投票（可选）
+        function resetVotes() {
+            if (confirm('确定要重置所有投票吗？')) {
+                votes = { green: 0, white: 0, red: 0 };
+                localStorage.setItem('tradingVotes', JSON.stringify(votes));
+                updateVoteDisplay();
+            }
+        }
+
+        // 添加右键菜单重置功能
+        document.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            resetVotes();
+        });
+    </script>
+</body>
+</html>
