@@ -125,6 +125,31 @@
             ]
         };
 
+        // 真实的市场数据（示例数据，实际使用时可以接入API）
+        const marketData = {
+            btc: {
+                symbol: "BINANCE:BTCUSDT",
+                name: "比特币/USDT",
+                currentPrice: 67542.50,
+                changePercent: 2.34,
+                previousPrice: 66000.00
+            },
+            sh: {
+                symbol: "SSE:000001",
+                name: "上证指数",
+                currentPrice: 3198.76,
+                changePercent: -0.45,
+                previousPrice: 3213.20
+            },
+            spx: {
+                symbol: "SP:SPX",
+                name: "标普500",
+                currentPrice: 5225.63,
+                changePercent: 0.78,
+                previousPrice: 5185.10
+            }
+        };
+
         // 初始化变量
         let votes = {
             btc: { green: 0, white: 0, red: 0 },
@@ -137,6 +162,7 @@
         let globalVolume = 0.3;
         let audioInitialized = false;
         let currentMood = 'neutral';
+        let tradingViewWidget = null;
 
         // 调试信息
         function debug(message) {
@@ -149,7 +175,7 @@
             debug('页面加载完成 - 请点击页面任意位置');
             loadVotes();
             initTradingView();
-            setupIndexData();
+            setupRealTimeData();
             updateDisplay();
         });
 
@@ -171,14 +197,98 @@
             }
         });
 
-        // 选择指数
+        // 选择指数 - 修复切换功能
         function selectIndex(index) {
             currentIndex = index;
             document.querySelectorAll('.index-card').forEach(card => card.classList.remove('active'));
             event.currentTarget.classList.add('active');
             updateDisplay();
-            // 移除自动根据市场行情切换音乐的逻辑
-            // if (musicEnabled) updateMusicBasedOnMarket();
+            
+            // 切换K线图
+            switchChart(index);
+        }
+
+        // 切换K线图
+        function switchChart(index) {
+            const symbol = marketData[index].symbol;
+            
+            if (tradingViewWidget) {
+                // 如果widget已存在，更改符号
+                tradingViewWidget.setSymbol(symbol, "5", function() {
+                    debug(`已切换到: ${marketData[index].name}`);
+                });
+            } else {
+                // 初始化TradingView图表
+                initTradingView();
+            }
+        }
+
+        // TradingView图表初始化
+        function initTradingView() {
+            if (typeof TradingView === 'undefined') {
+                debug('TradingView库加载中...');
+                setTimeout(initTradingView, 500);
+                return;
+            }
+            
+            const symbol = marketData[currentIndex].symbol;
+            
+            tradingViewWidget = new TradingView.widget({
+                "width": "100%",
+                "height": "160",
+                "symbol": symbol,
+                "interval": "5",
+                "timezone": "Asia/Shanghai",
+                "theme": "dark",
+                "style": "1",
+                "locale": "zh_CN",
+                "enable_publishing": false,
+                "hide_top_toolbar": true,
+                "hide_legend": true,
+                "hide_side_toolbar": true,
+                "container_id": "tradingview_chart"
+            });
+            
+            debug(`K线图初始化: ${marketData[currentIndex].name}`);
+        }
+
+        // 设置实时数据（模拟真实数据更新）
+        function setupRealTimeData() {
+            // 初始显示真实数据
+            updateAllPrices();
+            
+            // 模拟实时数据更新（每10秒更新一次）
+            setInterval(() => {
+                updateAllPrices();
+            }, 10000);
+        }
+
+        // 更新所有价格显示
+        function updateAllPrices() {
+            Object.keys(marketData).forEach(index => {
+                // 模拟小幅波动（±0.5%）
+                const fluctuation = (Math.random() - 0.5) * 0.01;
+                const newPrice = marketData[index].currentPrice * (1 + fluctuation);
+                const changePercent = ((newPrice - marketData[index].previousPrice) / marketData[index].previousPrice) * 100;
+                
+                updateIndexData(index, newPrice, changePercent);
+            });
+        }
+
+        // 更新指数数据
+        function updateIndexData(index, price, changePercent) {
+            const priceElement = document.getElementById(`${index}Price`);
+            const changeElement = document.getElementById(`${index}Change`);
+            const statusElement = document.getElementById(`${index}Status`);
+            
+            if (priceElement) priceElement.textContent = price.toFixed(index === 'btc' ? 2 : 2);
+            if (changeElement) {
+                changeElement.textContent = `${changePercent >= 0 ? '+' : ''}${changePercent.toFixed(2)}%`;
+                changeElement.className = `index-change ${changePercent > 0 ? 'positive' : changePercent < 0 ? 'negative' : 'neutral'}`;
+            }
+            if (statusElement) {
+                statusElement.style.backgroundColor = changePercent > 0 ? '#00ff00' : changePercent < 0 ? '#ff0000' : '#cccccc';
+            }
         }
 
         // 加载投票数据
@@ -200,7 +310,7 @@
             }
         }
 
-        // 投票功能 - 主要修改在这里
+        // 投票功能
         function vote(color) {
             if (!votes[currentIndex]) votes[currentIndex] = { green: 0, white: 0, red: 0 };
             votes[currentIndex][color]++;
@@ -216,11 +326,10 @@
                 light.style.boxShadow = 'none';
             }, 300);
             
-            // 主要修改：点击投票按钮立即切换音乐
+            // 根据点击的按钮直接决定音乐类型
             if (musicEnabled) {
                 let mood = 'neutral';
                 
-                // 根据点击的按钮直接决定音乐类型
                 if (color === 'green') {
                     mood = 'happy';
                 } else if (color === 'red') {
@@ -229,7 +338,6 @@
                     mood = 'neutral';
                 }
                 
-                // 立即切换音乐
                 if (mood !== currentMood) {
                     currentMood = mood;
                     playMusic(mood);
@@ -250,49 +358,6 @@
                     light.className = `light ${color} level-${level}`;
                 }
             });
-        }
-
-        // 根据投票调整音乐（保留但修改逻辑）
-        function updateMusicBasedOnVotes() {
-            if (!musicEnabled) return;
-            
-            const currentVotes = votes[currentIndex] || { green: 0, white: 0, red: 0 };
-            
-            let mood = 'neutral';
-            // 根据最多票数决定音乐类型
-            if (currentVotes.green > currentVotes.red && currentVotes.green > currentVotes.white) {
-                mood = 'happy';
-            } else if (currentVotes.red > currentVotes.green && currentVotes.red > currentVotes.white) {
-                mood = 'sad';
-            }
-            
-            if (mood !== currentMood) {
-                currentMood = mood;
-                playMusic(mood);
-            }
-        }
-
-        // 根据市场行情调整音乐 - 禁用这个功能
-        function updateMusicBasedOnMarket() {
-            // 注释掉自动切换逻辑，只保留手动投票切换
-            // if (!musicEnabled) return;
-            
-            // const changes = {
-            //     btc: (Math.random() - 0.5) * 3,
-            //     sh: (Math.random() - 0.5) * 2,
-            //     spx: (Math.random() - 0.5) * 1.5
-            // };
-            
-            // const changePercent = changes[currentIndex] || 0;
-            
-            // let mood = 'neutral';
-            // if (changePercent > 0.5) mood = 'happy';
-            // else if (changePercent < -0.5) mood = 'sad';
-            
-            // if (mood !== currentMood) {
-            //     currentMood = mood;
-            //     playMusic(mood);
-            // }
         }
 
         // 播放音乐
@@ -387,6 +452,25 @@
             }
         }
 
+        // 根据投票调整音乐
+        function updateMusicBasedOnVotes() {
+            if (!musicEnabled) return;
+            
+            const currentVotes = votes[currentIndex] || { green: 0, white: 0, red: 0 };
+            
+            let mood = 'neutral';
+            if (currentVotes.green > currentVotes.red && currentVotes.green > currentVotes.white) {
+                mood = 'happy';
+            } else if (currentVotes.red > currentVotes.green && currentVotes.red > currentVotes.white) {
+                mood = 'sad';
+            }
+            
+            if (mood !== currentMood) {
+                currentMood = mood;
+                playMusic(mood);
+            }
+        }
+
         // 调整音量
         function changeVolume(value) {
             globalVolume = value / 100;
@@ -394,57 +478,6 @@
                 currentAudio.volume = globalVolume;
             }
             debug(`音量调整: ${value}%`);
-        }
-
-        // TradingView图表初始化
-        function initTradingView() {
-            if (typeof TradingView !== 'undefined') {
-                new TradingView.widget({
-                    "width": "100%", "height": "160", "symbol": "BINANCE:BTCUSDT", "interval": "5",
-                    "timezone": "Asia/Shanghai", "theme": "dark", "style": "1", "locale": "zh_CN",
-                    "enable_publishing": false, "hide_top_toolbar": true, "hide_legend": true,
-                    "hide_side_toolbar": true, "container_id": "tradingview_chart"
-                });
-            }
-        }
-
-        // 设置指数数据 - 移除自动音乐切换
-        function setupIndexData() {
-            updateIndexData('btc', 44984.74, -0.05);
-            updateIndexData('sh', 3199.88, 0.49);
-            updateIndexData('spx', 4450.32, 0.32);
-            
-            setInterval(() => {
-                updateIndexData('btc', 44984.74 + (Math.random() - 0.5) * 100, (Math.random() - 0.5) * 2);
-                updateIndexData('sh', 3199.88 + (Math.random() - 0.5) * 10, (Math.random() - 0.5) * 1);
-                updateIndexData('spx', 4450.32 + (Math.random() - 0.5) * 15, (Math.random() - 0.5) * 0.8);
-                
-                // 移除自动音乐切换
-                // if (musicEnabled) updateMusicBasedOnMarket();
-            }, 5000);
-        }
-
-        function updateIndexData(index, price, changePercent) {
-            const priceElement = document.getElementById(`${index}Price`);
-            const changeElement = document.getElementById(`${index}Change`);
-            const statusElement = document.getElementById(`${index}Status`);
-            
-            if (priceElement) priceElement.textContent = price.toFixed(2);
-            if (changeElement) {
-                changeElement.textContent = `${changePercent >= 0 ? '+' : ''}${changePercent.toFixed(2)}%`;
-                changeElement.className = `index-change ${changePercent > 0 ? 'positive' : changePercent < 0 ? 'negative' : 'neutral'}`;
-            }
-            if (statusElement) {
-                statusElement.style.backgroundColor = changePercent > 0 ? '#00ff00' : changePercent < 0 ? '#ff0000' : '#cccccc';
-            }
-        }
-
-        // 添加手动测试函数
-        function testMusic(mood) {
-            if (musicEnabled) {
-                currentMood = mood;
-                playMusic(mood);
-            }
         }
     </script>
 </body>
