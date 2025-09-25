@@ -125,28 +125,22 @@
             ]
         };
 
-        // 真实的市场数据（示例数据，实际使用时可以接入API）
+        // 市场数据配置
         const marketData = {
             btc: {
                 symbol: "BINANCE:BTCUSDT",
                 name: "比特币/USDT",
-                currentPrice: 67542.50,
-                changePercent: 2.34,
-                previousPrice: 66000.00
+                tvSymbol: "BINANCE:BTCUSDT"
             },
             sh: {
                 symbol: "SSE:000001",
                 name: "上证指数",
-                currentPrice: 3198.76,
-                changePercent: -0.45,
-                previousPrice: 3213.20
+                tvSymbol: "SSE:000001"
             },
             spx: {
                 symbol: "SP:SPX",
                 name: "标普500",
-                currentPrice: 5225.63,
-                changePercent: 0.78,
-                previousPrice: 5185.10
+                tvSymbol: "SP:SPX"
             }
         };
 
@@ -163,6 +157,7 @@
         let audioInitialized = false;
         let currentMood = 'neutral';
         let tradingViewWidget = null;
+        let datafeed = null;
 
         // 调试信息
         function debug(message) {
@@ -175,8 +170,10 @@
             debug('页面加载完成 - 请点击页面任意位置');
             loadVotes();
             initTradingView();
-            setupRealTimeData();
             updateDisplay();
+            
+            // 初始化价格显示
+            updateAllPrices();
         });
 
         // 全局点击事件 - 激活音频
@@ -186,7 +183,6 @@
                 debug('音频已激活 - 可以播放音乐');
                 document.getElementById('musicStatus').textContent = '音频就绪，点击播放';
                 
-                // 创建一个无声的音频来获得播放权限
                 const silentAudio = new Audio();
                 silentAudio.play().then(() => {
                     silentAudio.pause();
@@ -197,7 +193,7 @@
             }
         });
 
-        // 选择指数 - 修复切换功能
+        // 选择指数
         function selectIndex(index) {
             currentIndex = index;
             document.querySelectorAll('.index-card').forEach(card => card.classList.remove('active'));
@@ -210,16 +206,28 @@
 
         // 切换K线图
         function switchChart(index) {
-            const symbol = marketData[index].symbol;
+            const symbol = marketData[index].tvSymbol;
             
             if (tradingViewWidget) {
-                // 如果widget已存在，更改符号
                 tradingViewWidget.setSymbol(symbol, "5", function() {
                     debug(`已切换到: ${marketData[index].name}`);
+                    // 切换后更新价格显示
+                    updatePriceFromChart(symbol, index);
                 });
-            } else {
-                // 初始化TradingView图表
-                initTradingView();
+            }
+        }
+
+        // 从TradingView图表获取价格数据
+        function updatePriceFromChart(symbol, index) {
+            // 这里我们使用TradingView的widget回调来获取实时数据
+            if (window.tvWidget) {
+                window.tvWidget.activeChart().dataReady(() => {
+                    const series = window.tvWidget.activeChart().series();
+                    const price = series.getPrice();
+                    if (price) {
+                        updateIndexData(index, price, 0); // 涨跌幅需要额外计算
+                    }
+                });
             }
         }
 
@@ -231,7 +239,7 @@
                 return;
             }
             
-            const symbol = marketData[currentIndex].symbol;
+            const symbol = marketData[currentIndex].tvSymbol;
             
             tradingViewWidget = new TradingView.widget({
                 "width": "100%",
@@ -246,33 +254,65 @@
                 "hide_top_toolbar": true,
                 "hide_legend": true,
                 "hide_side_toolbar": true,
-                "container_id": "tradingview_chart"
+                "container_id": "tradingview_chart",
+                "studies_overrides": {
+                    "volume.volume.color.0": "#00ff00",
+                    "volume.volume.color.1": "#ff0000",
+                    "volume.volume.transparency": 70
+                }
             });
+            
+            // 保存widget引用到全局变量
+            window.tvWidget = tradingViewWidget;
             
             debug(`K线图初始化: ${marketData[currentIndex].name}`);
-        }
-
-        // 设置实时数据（模拟真实数据更新）
-        function setupRealTimeData() {
-            // 初始显示真实数据
-            updateAllPrices();
             
-            // 模拟实时数据更新（每10秒更新一次）
-            setInterval(() => {
-                updateAllPrices();
-            }, 10000);
+            // 监听图表就绪事件
+            tradingViewWidget.onChartReady(() => {
+                debug('图表准备就绪，开始获取实时数据');
+                startRealTimeDataUpdates();
+            });
         }
 
-        // 更新所有价格显示
-        function updateAllPrices() {
-            Object.keys(marketData).forEach(index => {
-                // 模拟小幅波动（±0.5%）
-                const fluctuation = (Math.random() - 0.5) * 0.01;
-                const newPrice = marketData[index].currentPrice * (1 + fluctuation);
-                const changePercent = ((newPrice - marketData[index].previousPrice) / marketData[index].previousPrice) * 100;
+        // 开始实时数据更新
+        function startRealTimeDataUpdates() {
+            // 使用第三方API获取实时价格数据
+            updatePricesFromAPI();
+            
+            // 每30秒更新一次价格
+            setInterval(updatePricesFromAPI, 30000);
+        }
+
+        // 从第三方API获取实时价格
+        async function updatePricesFromAPI() {
+            try {
+                // 比特币价格（使用CoinGecko API）
+                const btcResponse = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true');
+                const btcData = await btcResponse.json();
+                if (btcData.bitcoin) {
+                    updateIndexData('btc', btcData.bitcoin.usd, btcData.bitcoin.usd_24h_change);
+                }
                 
-                updateIndexData(index, newPrice, changePercent);
-            });
+                // 上证指数和标普500使用模拟数据（实际使用时可以接入其他金融API）
+                // 这里使用合理的当前价格
+                updateIndexData('sh', 3858.12, 0.45); // 上证指数
+                updateIndexData('spx', 6637.25, 0.32); // 标普500
+                
+            } catch (error) {
+                debug('API请求失败，使用备用数据');
+                // 备用数据 - 使用您提供的真实价格
+                updateIndexData('btc', 117850, 2.1);
+                updateIndexData('sh', 3858, 0.45);
+                updateIndexData('spx', 6637, 0.32);
+            }
+        }
+
+        // 更新所有价格显示（初始显示）
+        function updateAllPrices() {
+            // 使用您提供的真实价格作为初始显示
+            updateIndexData('btc', 117850, 2.1);
+            updateIndexData('sh', 3858, 0.45);
+            updateIndexData('spx', 6637, 0.32);
         }
 
         // 更新指数数据
@@ -281,11 +321,19 @@
             const changeElement = document.getElementById(`${index}Change`);
             const statusElement = document.getElementById(`${index}Status`);
             
-            if (priceElement) priceElement.textContent = price.toFixed(index === 'btc' ? 2 : 2);
+            if (priceElement) {
+                if (index === 'btc') {
+                    priceElement.textContent = price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                } else {
+                    priceElement.textContent = price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                }
+            }
+            
             if (changeElement) {
                 changeElement.textContent = `${changePercent >= 0 ? '+' : ''}${changePercent.toFixed(2)}%`;
                 changeElement.className = `index-change ${changePercent > 0 ? 'positive' : changePercent < 0 ? 'negative' : 'neutral'}`;
             }
+            
             if (statusElement) {
                 statusElement.style.backgroundColor = changePercent > 0 ? '#00ff00' : changePercent < 0 ? '#ff0000' : '#cccccc';
             }
@@ -437,7 +485,6 @@
                 toggleBtn.textContent = '⏹️ 停止音乐';
                 toggleBtn.style.background = 'linear-gradient(45deg, #ff6b6b, #ee5a24)';
                 debug('音乐已启用');
-                // 启用时根据当前投票状态播放音乐
                 updateMusicBasedOnVotes();
             } else {
                 toggleBtn.textContent = '🎵 播放音乐';
