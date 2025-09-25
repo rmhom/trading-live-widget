@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -6,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>智能音乐交易看板</title>
     <style>
-        /* 样式保持不变 */
         body { margin: 0; padding: 10px; background: transparent; font-family: Arial, sans-serif; }
         .container { width: 500px; height: 350px; background: rgba(0, 0, 0, 0.95); border-radius: 10px; padding: 15px; border: 2px solid #333; }
         .indices-section { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 10px; }
@@ -139,7 +137,6 @@
         let globalVolume = 0.3;
         let audioInitialized = false;
         let currentMood = 'neutral';
-        let musicFilesStatus = {};
 
         // 调试信息
         function debug(message) {
@@ -154,56 +151,7 @@
             initTradingView();
             setupIndexData();
             updateDisplay();
-            testMusicFiles(); // 测试音乐文件
         });
-
-        // 测试音乐文件是否存在和可播放
-        function testMusicFiles() {
-            debug('测试音乐文件...');
-            const testFiles = [
-                { name: 'happy.mp3', mood: 'happy' },
-                { name: 'neutral.mp3', mood: 'neutral' },
-                { name: 'sad.mp3', mood: 'sad' }
-            ];
-            
-            testFiles.forEach(fileInfo => {
-                const audio = new Audio();
-                audio.src = fileInfo.name;
-                audio.preload = 'metadata';
-                
-                let loadTimeout = setTimeout(() => {
-                    debug(`⏰ ${fileInfo.name} 加载超时`);
-                    musicFilesStatus[fileInfo.mood] = 'timeout';
-                }, 5000);
-                
-                audio.addEventListener('loadeddata', () => {
-                    clearTimeout(loadTimeout);
-                    musicFilesStatus[fileInfo.mood] = 'loaded';
-                    debug(`✓ ${fileInfo.name} 可正常加载 (时长: ${audio.duration.toFixed(1)}秒)`);
-                });
-                
-                audio.addEventListener('canplaythrough', () => {
-                    musicFilesStatus[fileInfo.mood] = 'playable';
-                    debug(`🎵 ${fileInfo.name} 可以播放`);
-                });
-                
-                audio.addEventListener('error', (e) => {
-                    clearTimeout(loadTimeout);
-                    musicFilesStatus[fileInfo.mood] = 'error';
-                    const error = audio.error;
-                    let errorMsg = '未知错误';
-                    if (error) {
-                        switch(error.code) {
-                            case error.MEDIA_ERR_ABORTED: errorMsg = '播放被中止'; break;
-                            case error.MEDIA_ERR_NETWORK: errorMsg = '网络错误'; break;
-                            case error.MEDIA_ERR_DECODE: errorMsg = '解码错误'; break;
-                            case error.MEDIA_ERR_SRC_NOT_SUPPORTED: errorMsg = '格式不支持'; break;
-                        }
-                    }
-                    debug(`✗ ${fileInfo.name} 加载失败 - ${errorMsg}`);
-                });
-            });
-        }
 
         // 全局点击事件 - 激活音频
         document.addEventListener('click', function() {
@@ -229,7 +177,8 @@
             document.querySelectorAll('.index-card').forEach(card => card.classList.remove('active'));
             event.currentTarget.classList.add('active');
             updateDisplay();
-            if (musicEnabled) updateMusicBasedOnMarket();
+            // 移除自动根据市场行情切换音乐的逻辑
+            // if (musicEnabled) updateMusicBasedOnMarket();
         }
 
         // 加载投票数据
@@ -251,7 +200,7 @@
             }
         }
 
-        // 投票功能
+        // 投票功能 - 主要修改在这里
         function vote(color) {
             if (!votes[currentIndex]) votes[currentIndex] = { green: 0, white: 0, red: 0 };
             votes[currentIndex][color]++;
@@ -267,7 +216,26 @@
                 light.style.boxShadow = 'none';
             }, 300);
             
-            if (musicEnabled) updateMusicBasedOnVotes();
+            // 主要修改：点击投票按钮立即切换音乐
+            if (musicEnabled) {
+                let mood = 'neutral';
+                
+                // 根据点击的按钮直接决定音乐类型
+                if (color === 'green') {
+                    mood = 'happy';
+                } else if (color === 'red') {
+                    mood = 'sad';
+                } else {
+                    mood = 'neutral';
+                }
+                
+                // 立即切换音乐
+                if (mood !== currentMood) {
+                    currentMood = mood;
+                    playMusic(mood);
+                    debug(`投票触发音乐切换: ${color} -> ${mood}`);
+                }
+            }
         }
 
         // 更新显示
@@ -284,13 +252,14 @@
             });
         }
 
-        // 根据投票调整音乐
+        // 根据投票调整音乐（保留但修改逻辑）
         function updateMusicBasedOnVotes() {
             if (!musicEnabled) return;
             
             const currentVotes = votes[currentIndex] || { green: 0, white: 0, red: 0 };
             
             let mood = 'neutral';
+            // 根据最多票数决定音乐类型
             if (currentVotes.green > currentVotes.red && currentVotes.green > currentVotes.white) {
                 mood = 'happy';
             } else if (currentVotes.red > currentVotes.green && currentVotes.red > currentVotes.white) {
@@ -303,41 +272,35 @@
             }
         }
 
-        // 根据市场行情调整音乐
+        // 根据市场行情调整音乐 - 禁用这个功能
         function updateMusicBasedOnMarket() {
-            if (!musicEnabled) return;
+            // 注释掉自动切换逻辑，只保留手动投票切换
+            // if (!musicEnabled) return;
             
-            const changes = {
-                btc: (Math.random() - 0.5) * 3,
-                sh: (Math.random() - 0.5) * 2,
-                spx: (Math.random() - 0.5) * 1.5
-            };
+            // const changes = {
+            //     btc: (Math.random() - 0.5) * 3,
+            //     sh: (Math.random() - 0.5) * 2,
+            //     spx: (Math.random() - 0.5) * 1.5
+            // };
             
-            const changePercent = changes[currentIndex] || 0;
+            // const changePercent = changes[currentIndex] || 0;
             
-            let mood = 'neutral';
-            if (changePercent > 0.5) mood = 'happy';
-            else if (changePercent < -0.5) mood = 'sad';
+            // let mood = 'neutral';
+            // if (changePercent > 0.5) mood = 'happy';
+            // else if (changePercent < -0.5) mood = 'sad';
             
-            if (mood !== currentMood) {
-                currentMood = mood;
-                playMusic(mood);
-            }
+            // if (mood !== currentMood) {
+            //     currentMood = mood;
+            //     playMusic(mood);
+            // }
         }
 
-        // 播放音乐 - 修复版本
+        // 播放音乐
         function playMusic(mood) {
-            debug(`尝试播放 ${mood} 音乐`);
+            debug(`播放 ${mood} 音乐`);
             
             if (!musicEnabled) {
                 debug('音乐未启用');
-                return;
-            }
-
-            // 检查文件状态
-            if (musicFilesStatus[mood] === 'error') {
-                debug(`音乐文件 ${mood}.mp3 不可用`);
-                document.getElementById('musicStatus').textContent = `音乐文件 ${mood}.mp3 不可用`;
                 return;
             }
 
@@ -363,29 +326,13 @@
                 currentAudio.loop = true;
                 currentAudio.volume = globalVolume;
                 
-                // 添加更多事件监听器来诊断问题
-                currentAudio.addEventListener('loadstart', () => debug('开始加载音频'));
-                currentAudio.addEventListener('progress', () => debug('音频加载进度更新'));
-                currentAudio.addEventListener('loadedmetadata', () => debug('音频元数据加载完成'));
-                currentAudio.addEventListener('canplay', () => debug('音频可以开始播放'));
-                
                 currentAudio.addEventListener('canplaythrough', function() {
-                    debug('音乐可以完整播放');
+                    debug('音乐可以播放');
                 });
                 
                 currentAudio.addEventListener('error', function(e) {
-                    const error = currentAudio.error;
-                    let errorMsg = '未知错误';
-                    if (error) {
-                        switch(error.code) {
-                            case error.MEDIA_ERR_ABORTED: errorMsg = '播放被中止'; break;
-                            case error.MEDIA_ERR_NETWORK: errorMsg = '网络错误'; break;
-                            case error.MEDIA_ERR_DECODE: errorMsg = '解码错误 - 文件可能损坏'; break;
-                            case error.MEDIA_ERR_SRC_NOT_SUPPORTED: errorMsg = '格式不支持'; break;
-                        }
-                    }
-                    debug(`音乐加载错误: ${errorMsg}`);
-                    document.getElementById('musicStatus').textContent = `播放错误: ${errorMsg}`;
+                    debug('音乐加载错误: ' + e.target.error?.message || '未知错误');
+                    document.getElementById('musicStatus').textContent = '音乐文件未找到: ' + selectedTrack.url;
                 });
                 
                 currentAudio.addEventListener('playing', function() {
@@ -395,33 +342,19 @@
                     document.getElementById('currentTrack').textContent = `${selectedTrack.name}`;
                 });
 
-                currentAudio.addEventListener('ended', function() {
-                    debug('音乐播放结束');
-                    if (currentAudio.loop) {
-                        debug('循环播放下一轮');
-                    }
-                });
-
-                currentAudio.addEventListener('timeupdate', function() {
-                    // 每10秒输出一次播放进度（用于调试）
-                    if (Math.floor(currentAudio.currentTime) % 10 === 0) {
-                        debug(`播放进度: ${currentAudio.currentTime.toFixed(1)}/${currentAudio.duration.toFixed(1)}秒`);
-                    }
-                });
-
                 // 尝试播放
                 const playPromise = currentAudio.play();
                 if (playPromise !== undefined) {
                     playPromise.then(() => {
-                        debug('音乐播放成功启动');
+                        debug('音乐播放成功');
                     }).catch(error => {
                         debug('播放被阻止: ' + error.message);
-                        document.getElementById('musicStatus').textContent = '点击允许播放或检查文件';
+                        document.getElementById('musicStatus').textContent = '点击允许播放';
                     });
                 }
             } catch (error) {
                 debug('播放异常: ' + error.message);
-                document.getElementById('musicStatus').textContent = '播放失败: ' + error.message;
+                document.getElementById('musicStatus').textContent = '播放失败';
             }
         }
 
@@ -439,8 +372,8 @@
                 toggleBtn.textContent = '⏹️ 停止音乐';
                 toggleBtn.style.background = 'linear-gradient(45deg, #ff6b6b, #ee5a24)';
                 debug('音乐已启用');
-                // 延迟一点开始播放，确保音频上下文已准备就绪
-                setTimeout(() => updateMusicBasedOnMarket(), 100);
+                // 启用时根据当前投票状态播放音乐
+                updateMusicBasedOnVotes();
             } else {
                 toggleBtn.textContent = '🎵 播放音乐';
                 toggleBtn.style.background = 'linear-gradient(45deg, #667eea, #764ba2)';
@@ -475,7 +408,7 @@
             }
         }
 
-        // 设置指数数据
+        // 设置指数数据 - 移除自动音乐切换
         function setupIndexData() {
             updateIndexData('btc', 44984.74, -0.05);
             updateIndexData('sh', 3199.88, 0.49);
@@ -486,7 +419,8 @@
                 updateIndexData('sh', 3199.88 + (Math.random() - 0.5) * 10, (Math.random() - 0.5) * 1);
                 updateIndexData('spx', 4450.32 + (Math.random() - 0.5) * 15, (Math.random() - 0.5) * 0.8);
                 
-                if (musicEnabled) updateMusicBasedOnMarket();
+                // 移除自动音乐切换
+                // if (musicEnabled) updateMusicBasedOnMarket();
             }, 5000);
         }
 
@@ -505,10 +439,12 @@
             }
         }
 
-        // 手动测试音乐播放的函数（用于调试）
-        function testPlay(mood) {
-            debug(`手动测试播放 ${mood} 音乐`);
-            playMusic(mood);
+        // 添加手动测试函数
+        function testMusic(mood) {
+            if (musicEnabled) {
+                currentMood = mood;
+                playMusic(mood);
+            }
         }
     </script>
 </body>
