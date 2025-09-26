@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -35,7 +34,9 @@
         .volume-control { width: 80%; margin: 3px 0; }
         .status-indicator { width: 6px; height: 6px; border-radius: 50%; display: inline-block; margin-left: 3px; }
         .debug-info { position: absolute; top: 5px; right: 5px; font-size: 8px; color: #666; }
-        .data-source { font-size: 8px; color: #666; text-align: center; margin-top: 3px; }
+        .price-sync { font-size: 8px; color: #888; text-align: center; margin-top: 2px; }
+        .price-stable { color: #00ff00; }
+        .price-delayed { color: #ffaa00; }
     </style>
 </head>
 <body>
@@ -48,23 +49,25 @@
                 <div class="index-name">比特币/USDT <span class="status-indicator" id="btcStatus" style="background-color: #ccc;"></span></div>
                 <div class="index-price" id="btcPrice">--.--</div>
                 <div class="index-change" id="btcChange">0.00%</div>
+                <div class="price-sync" id="btcSync">同步中...</div>
             </div>
             <div class="index-card" onclick="selectIndex('sh')">
                 <div class="index-name">上证指数 <span class="status-indicator" id="shStatus" style="background-color: #ccc;"></span></div>
                 <div class="index-price" id="shPrice">--.--</div>
                 <div class="index-change" id="shChange">0.00%</div>
+                <div class="price-sync" id="shSync">同步中...</div>
             </div>
             <div class="index-card" onclick="selectIndex('spy')">
                 <div class="index-name">SPDR标普500 <span class="status-indicator" id="spyStatus" style="background-color: #ccc;"></span></div>
                 <div class="index-price" id="spyPrice">--.--</div>
                 <div class="index-change" id="spyChange">0.00%</div>
+                <div class="price-sync" id="spySync">同步中...</div>
             </div>
         </div>
         
         <!-- 图表区域 -->
         <div class="chart-container">
             <div id="tradingview_chart"></div>
-            <div class="data-source" id="chartSource">数据源: TradingView</div>
         </div>
         
         <!-- 控制和音乐区域 -->
@@ -128,31 +131,46 @@
             ]
         };
 
-        // 市场数据配置 - 使用替代方案
+        // 市场数据配置 - 使用真实API
         const marketData = {
             btc: {
                 symbol: "BINANCE:BTCUSDT",
                 name: "比特币/USDT",
                 tvSymbol: "BINANCE:BTCUSDT",
-                initialPrice: 117850,
-                initialChange: 2.1,
-                interval: "5" // 5分钟K线
+                currentPrice: 0,
+                previousPrice: 0,
+                changePercent: 0,
+                interval: "5",
+                lastUpdate: 0,
+                apiUrl: "https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT",
+                pricePath: "lastPrice",
+                changePath: "priceChangePercent"
             },
             sh: {
                 symbol: "SSE:000001",
                 name: "上证指数",
-                tvSymbol: "SSE:000001",
-                initialPrice: 3858,
-                initialChange: 0.45,
-                interval: "1D" // 上证使用日K线
+                tvSymbol: "SSE:000001", 
+                currentPrice: 0,
+                previousPrice: 0,
+                changePercent: 0,
+                interval: "1D",
+                lastUpdate: 0,
+                apiUrl: "https://api-ddc.wallstcn.com/market/real?en_prod_code=000001.SS",
+                pricePath: "data.snapshot.000001.SS.last_px",
+                changePath: "data.snapshot.000001.SS.px_change_rate"
             },
             spy: {
                 symbol: "AMEX:SPY",
                 name: "SPDR标普500",
                 tvSymbol: "AMEX:SPY",
-                initialPrice: 663, // SPY价格约为标普500的1/10
-                initialChange: 0.32,
-                interval: "5" // 5分钟K线
+                currentPrice: 0,
+                previousPrice: 0,
+                changePercent: 0,
+                interval: "5",
+                lastUpdate: 0,
+                apiUrl: "https://query1.finance.yahoo.com/v8/finance/chart/SPY",
+                pricePath: "chart.result[0].meta.regularMarketPrice",
+                changePath: "chart.result[0].meta.regularMarketChangePercent"
             }
         };
 
@@ -169,6 +187,7 @@
         let audioInitialized = false;
         let currentMood = 'neutral';
         let tradingViewWidget = null;
+        let priceUpdateInterval = null;
 
         // 调试信息
         function debug(message) {
@@ -180,17 +199,242 @@
         window.addEventListener('load', function() {
             debug('页面加载完成 - 请点击页面任意位置');
             loadVotes();
-            displayInitialPrices();
             initTradingView();
             updateDisplay();
+            
+            // 立即获取初始价格
+            fetchAllPrices();
+            
+            // 启动价格同步（30秒间隔，更稳定）
+            startPriceSync();
         });
 
-        // 显示初始价格
-        function displayInitialPrices() {
-            Object.keys(marketData).forEach(index => {
-                const data = marketData[index];
-                updateIndexData(index, data.initialPrice, data.initialChange);
-            });
+        // 启动价格同步
+        function startPriceSync() {
+            // 清除之前的定时器
+            if (priceUpdateInterval) {
+                clearInterval(priceUpdateInterval);
+            }
+            
+            // 每30秒同步一次价格（更长时间间隔，更稳定）
+            priceUpdateInterval = setInterval(() => {
+                fetchAllPrices();
+            }, 30000);
+            
+            debug('价格同步已启动（30秒间隔）');
+        }
+
+        // 获取所有价格
+        async function fetchAllPrices() {
+            const promises = Object.keys(marketData).map(index => 
+                fetchPriceFromAPI(index)
+            );
+            
+            await Promise.allSettled(promises);
+            debug('所有价格更新完成');
+        }
+
+        // 从API获取价格
+        async function fetchPriceFromAPI(index) {
+            const data = marketData[index];
+            
+            try {
+                // 使用CORS代理避免跨域问题
+                const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
+                const response = await fetch(proxyUrl + data.apiUrl, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const result = await response.json();
+                
+                // 提取价格数据
+                let price = extractValue(result, data.pricePath);
+                let changePercent = extractValue(result, data.changePath);
+                
+                // 特殊处理百分比数据
+                if (index === 'spy') {
+                    changePercent = changePercent * 100; // Yahoo返回的是小数
+                }
+                
+                if (price && price > 0) {
+                    updatePriceData(index, price, changePercent, 'API实时');
+                } else {
+                    throw new Error('无效的价格数据');
+                }
+                
+            } catch (error) {
+                debug(`${data.name} API获取失败: ${error.message}`);
+                
+                // 使用备用API方案
+                await tryBackupAPI(index);
+            }
+        }
+
+        // 尝试备用API
+        async function tryBackupAPI(index) {
+            const data = marketData[index];
+            let backupUrl, pricePath, changePath;
+            
+            try {
+                switch(index) {
+                    case 'btc':
+                        // 备用：CoinGecko API
+                        backupUrl = 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true';
+                        const btcResponse = await fetch(backupUrl);
+                        const btcData = await btcResponse.json();
+                        if (btcData.bitcoin) {
+                            updatePriceData(index, btcData.bitcoin.usd, btcData.bitcoin.usd_24h_change, 'API备用');
+                            return;
+                        }
+                        break;
+                        
+                    case 'sh':
+                        // 备用：新浪财经API
+                        backupUrl = 'https://hq.sinajs.cn/list=sh000001';
+                        const shResponse = await fetch(backupUrl);
+                        const shText = await shResponse.text();
+                        // 解析新浪财经数据格式
+                        const shMatch = shText.match(/="(.+)"/);
+                        if (shMatch) {
+                            const shData = shMatch[1].split(',');
+                            const price = parseFloat(shData[1]); // 当前价
+                            const prevClose = parseFloat(shData[2]); // 昨收价
+                            const changePercent = ((price - prevClose) / prevClose) * 100;
+                            updatePriceData(index, price, changePercent, 'API备用');
+                            return;
+                        }
+                        break;
+                        
+                    case 'spy':
+                        // 备用：Alpha Vantage API（需要API key，这里用模拟）
+                        // 在实际使用中，您可以申请免费的API key
+                        backupUrl = 'https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=SPY&apikey=demo';
+                        const spyResponse = await fetch(backupUrl);
+                        const spyData = await spyResponse.json();
+                        if (spyData['Global Quote']) {
+                            const quote = spyData['Global Quote'];
+                            updatePriceData(index, 
+                                parseFloat(quote['05. price']),
+                                parseFloat(quote['10. change percent']),
+                                'API备用'
+                            );
+                            return;
+                        }
+                        break;
+                }
+                
+                // 所有API都失败，使用最后一次有效数据
+                useLastValidData(index);
+                
+            } catch (error) {
+                debug(`${data.name} 备用API失败: ${error.message}`);
+                useLastValidData(index);
+            }
+        }
+
+        // 使用最后一次有效数据
+        function useLastValidData(index) {
+            const data = marketData[index];
+            if (data.currentPrice > 0) {
+                // 使用最后一次有效数据，但标记为延迟
+                updatePriceData(index, data.currentPrice, data.changePercent, '数据延迟');
+            } else {
+                // 完全没有数据时使用合理的默认值
+                const defaults = {
+                    'btc': { price: 117850, change: 0.73 },
+                    'sh': { price: 3858, change: 0.47 },
+                    'spy': { price: 663, change: 0.45 }
+                };
+                const defaultData = defaults[index];
+                updatePriceData(index, defaultData.price, defaultData.change, '默认数据');
+            }
+        }
+
+        // 从对象中提取嵌套值
+        function extractValue(obj, path) {
+            return path.split('.').reduce((current, key) => {
+                // 处理数组索引如 [0]
+                const match = key.match(/(\w+)\[(\d+)\]/);
+                if (match) {
+                    return current && current[match[1]] ? current[match[1]][match[2]] : undefined;
+                }
+                return current ? current[key] : undefined;
+            }, obj);
+        }
+
+        // 更新价格数据
+        function updatePriceData(index, price, changePercent, source) {
+            const data = marketData[index];
+            const previousPrice = data.currentPrice > 0 ? data.currentPrice : price;
+            
+            // 数据验证：确保价格变化合理
+            if (data.currentPrice > 0) {
+                const priceChange = Math.abs((price - data.currentPrice) / data.currentPrice);
+                if (priceChange > 0.1) { // 如果价格变化超过10%，可能是错误数据
+                    debug(`${data.name} 价格变化异常: ${priceChange.toFixed(2)}%`);
+                    // 使用平滑过渡，避免剧烈跳动
+                    price = data.currentPrice * (1 + Math.sign(price - data.currentPrice) * 0.01);
+                    changePercent = ((price - previousPrice) / previousPrice) * 100;
+                    source = '平滑调整';
+                }
+            }
+            
+            data.previousPrice = previousPrice;
+            data.currentPrice = price;
+            data.changePercent = changePercent;
+            data.lastUpdate = Date.now();
+            
+            updateIndexData(index, price, changePercent, source);
+        }
+
+        // 更新指数显示
+        function updateIndexData(index, price, changePercent, source = '未知') {
+            const priceElement = document.getElementById(`${index}Price`);
+            const changeElement = document.getElementById(`${index}Change`);
+            const statusElement = document.getElementById(`${index}Status`);
+            const syncElement = document.getElementById(`${index}Sync`);
+            
+            if (priceElement) {
+                if (index === 'btc') {
+                    priceElement.textContent = Math.round(price).toLocaleString('en-US');
+                } else {
+                    priceElement.textContent = price.toFixed(2);
+                }
+                
+                // 更温和的价格变化动画
+                priceElement.style.transition = 'all 0.5s ease';
+                priceElement.style.color = changePercent > 0 ? '#00ff00' : changePercent < 0 ? '#ff0000' : '#ffffff';
+            }
+            
+            if (changeElement) {
+                changeElement.textContent = `${changePercent >= 0 ? '+' : ''}${changePercent.toFixed(2)}%`;
+                changeElement.className = `index-change ${changePercent > 0 ? 'positive' : changePercent < 0 ? 'negative' : 'neutral'}`;
+                changeElement.style.transition = 'all 0.5s ease';
+            }
+            
+            if (statusElement) {
+                statusElement.style.backgroundColor = changePercent > 0 ? '#00ff00' : changePercent < 0 ? '#ff0000' : '#cccccc';
+                statusElement.style.transition = 'background-color 0.5s ease';
+            }
+            
+            if (syncElement) {
+                const now = new Date().toLocaleTimeString();
+                syncElement.textContent = `${source} · ${now}`;
+                syncElement.className = `price-sync ${
+                    source.includes('实时') ? 'price-stable' : 
+                    source.includes('延迟') ? 'price-delayed' : ''
+                }`;
+            }
+            
+            if (index === currentIndex) {
+                debug(`${marketData[index].name}: ${price} (${changePercent >= 0 ? '+' : ''}${changePercent.toFixed(2)}%)`);
+            }
         }
 
         // 全局点击事件 - 激活音频
@@ -219,6 +463,9 @@
             
             // 切换K线图
             switchChart(index);
+            
+            // 立即更新当前指数价格
+            fetchPriceFromAPI(index);
         }
 
         // 切换K线图
@@ -228,13 +475,6 @@
             
             if (tradingViewWidget) {
                 document.getElementById('tradingview_chart').innerHTML = '';
-                // 添加数据源说明
-                const sourceDiv = document.createElement('div');
-                sourceDiv.className = 'data-source';
-                sourceDiv.id = 'chartSource';
-                sourceDiv.textContent = `数据源: TradingView - ${marketData[index].name}`;
-                document.getElementById('tradingview_chart').appendChild(sourceDiv);
-                
                 initTradingViewWithSymbol(symbol, interval);
             }
         }
@@ -260,12 +500,7 @@
                 "hide_top_toolbar": true,
                 "hide_legend": true,
                 "hide_side_toolbar": false,
-                "container_id": "tradingview_chart",
-                "studies_overrides": {
-                    "volume.volume.color.0": "#00ff00",
-                    "volume.volume.color.1": "#ff0000",
-                    "volume.volume.transparency": 70
-                }
+                "container_id": "tradingview_chart"
             });
             
             debug(`K线图切换到: ${symbol} (${interval})`);
@@ -282,13 +517,6 @@
             const symbol = marketData[currentIndex].tvSymbol;
             const interval = marketData[currentIndex].interval;
             
-            // 添加数据源说明
-            const sourceDiv = document.createElement('div');
-            sourceDiv.className = 'data-source';
-            sourceDiv.id = 'chartSource';
-            sourceDiv.textContent = `数据源: TradingView - ${marketData[currentIndex].name}`;
-            document.getElementById('tradingview_chart').appendChild(sourceDiv);
-            
             tradingViewWidget = new TradingView.widget({
                 "width": "100%",
                 "height": "160",
@@ -302,39 +530,10 @@
                 "hide_top_toolbar": true,
                 "hide_legend": true,
                 "hide_side_toolbar": false,
-                "container_id": "tradingview_chart",
-                "studies_overrides": {
-                    "volume.volume.color.0": "#00ff00",
-                    "volume.volume.color.1": "#ff0000",
-                    "volume.volume.transparency": 70
-                }
+                "container_id": "tradingview_chart"
             });
             
             debug(`K线图初始化: ${marketData[currentIndex].name}`);
-        }
-
-        // 更新指数数据
-        function updateIndexData(index, price, changePercent) {
-            const priceElement = document.getElementById(`${index}Price`);
-            const changeElement = document.getElementById(`${index}Change`);
-            const statusElement = document.getElementById(`${index}Status`);
-            
-            if (priceElement) {
-                if (index === 'btc') {
-                    priceElement.textContent = price.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0});
-                } else {
-                    priceElement.textContent = price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-                }
-            }
-            
-            if (changeElement) {
-                changeElement.textContent = `${changePercent >= 0 ? '+' : ''}${changePercent.toFixed(2)}%`;
-                changeElement.className = `index-change ${changePercent > 0 ? 'positive' : changePercent < 0 ? 'negative' : 'neutral'}`;
-            }
-            
-            if (statusElement) {
-                statusElement.style.backgroundColor = changePercent > 0 ? '#00ff00' : changePercent < 0 ? '#ff0000' : '#cccccc';
-            }
         }
 
         // 加载投票数据
