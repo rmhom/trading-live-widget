@@ -20,25 +20,59 @@
             text-align: center; 
             margin-bottom: 30px;
         }
-        .news-content {
+        .news-section {
             background: #1e293b;
             padding: 25px;
             margin: 20px 0;
             border-radius: 12px;
-            border-left: 4px solid #60a5fa;
-            white-space: pre-wrap;
+            border-left: 4px solid #fbbf24;
+        }
+        .news-section.crypto {
+            border-left-color: #f59e0b;
+        }
+        .news-section.us-stock {
+            border-left-color: #10b981;
+        }
+        .news-section.domestic {
+            border-left-color: #8b5cf6;
+        }
+        .news-section h2 {
+            color: #e2e8f0;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+        .timestamp {
+            color: #94a3b8;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .price-highlight {
+            color: #fbbf24;
+            font-weight: bold;
+            font-size: 1.1em;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>📰 实时财经新闻直播看板</h1>
-        <div class="timestamp">更新时间: 2025/9/29 16:29:20</div>
-        <div class="timestamp">输入节点数: 1</div>
+        <div class="timestamp">更新时间: 2025/9/29 16:31:26</div>
+        <div class="timestamp price-highlight">比特币价格: 109513</div>
         
-        <div class="news-content">
-            <h2>📊 当前新闻数据</h2>
-            <p>{"crypto":[{"title":"加密货币市场交投活跃，价格在合理区间波动","source":"市场观察","time":"2025-09-29T16:29:20.403Z","type":"crypto","icon":"₿"},{"title":"区块链技术应用持续拓展，行业生态逐步完善","source":"技术分析","time":"2025-09-29T16:29:20.403Z","type":"crypto","icon":"🔗"}],"us_stock":[{"title":"美股市场正常交易，主要指数小幅波动","source":"市场观察","time":"2025-09-29T16:29:20.403Z","type":"us_stock","icon":"📊"},{"title":"投资者关注企业财报和经济数据发布","source":"财经新闻","time":"2025-09-29T16:29:20.403Z","type":"us_stock","icon":"📈"}],"china":[{"title":"A股市场平稳运行，结构性行情特征明显","source":"财经快讯","time":"2025-09-29T16:29:20.403Z","type":"china","icon":"🇨🇳"},{"title":"中国宏观经济政策保持连续性和稳定性","source":"政策分析","time":"2025-09-29T16:29:20.403Z","type":"china","icon":"🏦"}],"bitcoin_price":109513,"timestamp":"2025-09-29T16:29:20.403Z","update_time":"2025/9/29 16:29:20"}</p>
+        <div class="news-section crypto">
+            <h2>💰 加密货币新闻</h2>
+            <p>[object Object],[object Object],[object Object],[object Object],[object Object],[object Object]</p>
+        </div>
+        
+        <div class="news-section us-stock">
+            <h2>🇺🇸 美股市场动态</h2>
+            <p>[object Object],[object Object]</p>
+        </div>
+        
+        <div class="news-section domestic">
+            <h2>🇨🇳 国内财经要闻</h2>
+            <p>[object Object],[object Object]</p>
         </div>
     </div>
 </body>
