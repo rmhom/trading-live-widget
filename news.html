@@ -25,229 +25,37 @@
             padding: 25px;
             margin: 20px 0;
             border-radius: 12px;
-            border-left: 4px solid #fbbf24;
-        }
-        .news-section.crypto {
-            border-left-color: #f59e0b;
-        }
-        .news-section.us-stock {
-            border-left-color: #10b981;
-        }
-        .news-section.domestic {
-            border-left-color: #8b5cf6;
+            border-left: 4px solid #60a5fa;
         }
         .news-section h2 {
-            color: #e2e8f0;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            font-size: 1.4em;
+            color: #fbbf24;
+            margin-bottom: 15px;
         }
         .timestamp {
             color: #94a3b8;
             text-align: center;
             margin-bottom: 30px;
         }
-        .price-highlight {
-            color: #fbbf24;
-            font-weight: bold;
-            font-size: 1.2em;
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        .news-item {
-            background: rgba(255,255,255,0.05);
-            padding: 15px;
-            margin: 10px 0;
-            border-radius: 8px;
-            border-left: 3px solid #60a5fa;
-        }
-        .news-header {
-            display: flex;
-            align-items: center;
-            margin-bottom: 8px;
-        }
-        .news-icon {
-            font-size: 1.2em;
-            margin-right: 10px;
-        }
-        .news-title {
-            font-size: 1.1em;
-            font-weight: bold;
-            color: #e2e8f0;
-        }
-        .news-meta {
-            display: flex;
-            justify-content: space-between;
-            color: #94a3b8;
-            font-size: 0.9em;
-        }
-        .stats {
-            display: flex;
-            justify-content: space-around;
-            background: rgba(255,255,255,0.05);
-            padding: 15px;
-            border-radius: 10px;
-            margin: 20px 0;
-        }
-        .stat-item {
-            text-align: center;
-        }
-        .stat-value {
-            font-size: 1.5em;
-            font-weight: bold;
-            color: #60a5fa;
-        }
-        .stat-label {
-            color: #94a3b8;
-            font-size: 0.9em;
-        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>📰 实时财经新闻直播看板</h1>
-        <div class="timestamp">更新时间: 2025/9/29 17:24:45</div>
-        <div class="price-highlight">💰 比特币价格: 109513</div>
+        <div class="timestamp">更新时间: 2025/9/30 00:37:18</div>
         
-        <div class="stats">
-            <div class="stat-item">
-                <div class="stat-value">1</div>
-                <div class="stat-label">加密新闻</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-value">1</div>
-                <div class="stat-label">美股新闻</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-value">8</div>
-                <div class="stat-label">国内新闻</div>
-            </div>
+        <div class="news-section">
+            <h2>💰 加密货币新闻</h2>
+            <p>🪙 加密新闻加载中...</p>
         </div>
         
-        <div class="news-section crypto">
-            <h2>💰 加密货币新闻 (1条)</h2>
-            
-    <div class="news-item">
-      <div class="news-header">
-        <span class="news-icon">₿</span>
-        <div class="news-title">比特币价格: $109513</div>
-      </div>
-      <div class="news-meta">
-        <span class="news-source">来源: 行情数据</span>
-        <span class="news-time">2025/9/29 17:24:45</span>
-      </div>
-    </div>
-  
+        <div class="news-section">
+            <h2>🇺🇸 美股市场动态</h2>
+            <p>📈 暂无美股新闻数据</p>
         </div>
         
-        <div class="news-section us-stock">
-            <h2>🇺🇸 美股市场动态 (1条)</h2>
-            
-    <div class="news-item">
-      <div class="news-header">
-        <span class="news-icon">📈</span>
-        <div class="news-title">美股市场实时行情更新中</div>
-      </div>
-      <div class="news-meta">
-        <span class="news-source">来源: 市场数据</span>
-        <span class="news-time">2025/9/29 17:24:45</span>
-      </div>
-    </div>
-  
-        </div>
-        
-        <div class="news-section domestic">
-            <h2>🇨🇳 国内财经要闻 (8条)</h2>
-            
-    <div class="news-item">
-      <div class="news-header">
-        <span class="news-icon">🇨🇳</span>
-        <div class="news-title">A股市场正常交易，北向资金呈净流入态势</div>
-      </div>
-      <div class="news-meta">
-        <span class="news-source">来源: 财经快讯</span>
-        <span class="news-time">2025/9/29 17:24:45</span>
-      </div>
-    </div>
-  
-    <div class="news-item">
-      <div class="news-header">
-        <span class="news-icon">🇨🇳</span>
-        <div class="news-title">中国央行维持货币政策稳健，流动性合理充裕</div>
-      </div>
-      <div class="news-meta">
-        <span class="news-source">来源: 财经快讯</span>
-        <span class="news-time">2025/9/29 16:24:45</span>
-      </div>
-    </div>
-  
-    <div class="news-item">
-      <div class="news-header">
-        <span class="news-icon">🇨🇳</span>
-        <div class="news-title">科创板上市公司数量稳步增长，硬科技属性突出</div>
-      </div>
-      <div class="news-meta">
-        <span class="news-source">来源: 财经快讯</span>
-        <span class="news-time">2025/9/29 15:24:45</span>
-      </div>
-    </div>
-  
-    <div class="news-item">
-      <div class="news-header">
-        <span class="news-icon">🇨🇳</span>
-        <div class="news-title">新能源汽车产业政策持续优化，销量保持增长</div>
-      </div>
-      <div class="news-meta">
-        <span class="news-source">来源: 财经快讯</span>
-        <span class="news-time">2025/9/29 14:24:45</span>
-      </div>
-    </div>
-  
-    <div class="news-item">
-      <div class="news-header">
-        <span class="news-icon">🇨🇳</span>
-        <div class="news-title">数字经济与实体经济深度融合，数字化转型加速</div>
-      </div>
-      <div class="news-meta">
-        <span class="news-source">来源: 财经快讯</span>
-        <span class="news-time">2025/9/29 13:24:45</span>
-      </div>
-    </div>
-  
-    <div class="news-item">
-      <div class="news-header">
-        <span class="news-icon">🇨🇳</span>
-        <div class="news-title">绿色金融体系建设完善，碳金融市场稳步发展</div>
-      </div>
-      <div class="news-meta">
-        <span class="news-source">来源: 财经快讯</span>
-        <span class="news-time">2025/9/29 12:24:45</span>
-      </div>
-    </div>
-  
-    <div class="news-item">
-      <div class="news-header">
-        <span class="news-icon">🇨🇳</span>
-        <div class="news-title">区域经济协调发展，重大项目建设有序推进</div>
-      </div>
-      <div class="news-meta">
-        <span class="news-source">来源: 财经快讯</span>
-        <span class="news-time">2025/9/29 11:24:45</span>
-      </div>
-    </div>
-  
-    <div class="news-item">
-      <div class="news-header">
-        <span class="news-icon">🇨🇳</span>
-        <div class="news-title">消费市场持续恢复，新型消费业态快速发展</div>
-      </div>
-      <div class="news-meta">
-        <span class="news-source">来源: 财经快讯</span>
-        <span class="news-time">2025/9/29 10:24:45</span>
-      </div>
-    </div>
-  
+        <div class="news-section">
+            <h2>🇨🇳 国内财经要闻</h2>
+            <p>🇨🇳 暂无国内新闻数据</p>
         </div>
     </div>
 </body>
